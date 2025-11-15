@@ -1,600 +1,432 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>3D Realistic Solar System — Full Edition</title>
-  <style>
-    html, body { margin:0; padding:0; height:100%; background:#000; color:#fff; font-family: system-ui, Arial, sans-serif; }
-    #app { position:fixed; inset:0; }
-    /* HUD (left top) */
-    #hud {
-      position: fixed; left: 16px; top: 16px; z-index: 10; background: rgba(0,0,0,.5);
-      border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 12px 14px; backdrop-filter: blur(4px);
-      max-width: 380px;
-    }
-    #hud h1 { font-size: 16px; margin: 0 0 6px; font-weight: 700; }
-    #hud .row { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:6px; }
-    #hud label { font-size: 12px; opacity:.9; }
-    #hud input[type=range] { width: 170px; }
-    #hud button {
-      background:#ffc800; color:#000; border:0; border-radius:10px; padding:6px 10px; font-weight:700; cursor:pointer;
-    }
-    #hud button:hover { background:#ffb700; }
-    #hud .toggles { display:grid; grid-template-columns: 1fr 1fr; gap:6px 16px; margin-top:6px; }
-    /* Info panel (right) */
-    #panel {
-      position: fixed; right: 16px; top: 16px; z-index: 10; background: rgba(0,0,0,.5);
-      border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 12px 14px; width: 280px; backdrop-filter: blur(4px);
-    }
-    #panel h2 { font-size: 16px; margin: 0 0 6px; }
-    #panel p { margin: 6px 0; font-size: 13px; line-height: 1.35; opacity:.95; }
-    #panel .small { opacity:.7; font-size: 12px; }
-    #panel .actions { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
-    #panel button {
-      background:#1ea7fd; color:#000; border:0; border-radius:10px; padding:6px 10px; font-weight:700; cursor:pointer;
-    }
-    #panel button:hover { background:#0fa2ff; }
-    #thumb { width:100%; height:auto; border-radius:10px; border:1px solid rgba(255,255,255,.12); display:none; margin-top:8px; }
-
-    /* Labels */
-    .label {
-      color:#fff; font-size: 12px;
-      text-shadow: 0 0 8px #000, 0 0 2px #000;
-      transform: translate(-50%, -50%);
-      position: absolute; pointer-events:none; white-space: nowrap;
-    }
-
-    /* Credit */
-    #credit {
-      position: fixed; left: 16px; bottom: 12px; font-size: 11px; opacity: .7; user-select:none;
-      background: rgba(0,0,0,.35); padding: 6px 8px; border-radius: 8px; border:1px solid rgba(255,255,255,.12);
-    }
-
-    @media (max-width: 900px){
-      #panel { width: 240px; }
-      #hud { max-width: 330px; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RK4 Planetary N-Body Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Apply the Inter font globally */
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Ensure the canvas is responsive and centered */
+        #simulation-canvas {
+            background-color: #030712; /* Dark background matches UI */
+            cursor: crosshair;
+            display: block;
+            border-radius: 0.75rem; /* rounded-xl */
+        }
+    </style>
 </head>
-<body>
-  <div id="app"></div>
+<body class="min-h-screen bg-gray-900 text-gray-100 p-4 md:p-8">
 
-  <!-- Controls -->
-  <div id="hud">
-    <h1>🌞 3D Realistic Solar System — Full Edition</h1>
-    <div class="row">
-      <button id="toggle">⏸️ Pause</button>
-      <label for="speed">Speed</label>
-      <input id="speed" type="range" min="0" max="3" step="0.01" value="1" />
-      <label id="speedVal">1.00×</label>
+    <header class="text-center mb-8">
+        <h1 class="text-4xl font-extrabold text-yellow-400">
+            Planetary RK4 Simulation
+        </h1>
+        <p class="text-gray-400 text-sm mt-1">
+            High-accuracy N-Body Simulation using Runge-Kutta 4th Order Integration.
+        </p>
+    </header>
+
+    <div class="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto">
+        
+        <div id="controls-panel" class="lg:w-1/4 p-4 bg-gray-800 rounded-xl shadow-lg h-fit">
+            <h2 class="text-xl font-semibold text-indigo-400 mb-4 border-b border-gray-700 pb-2">
+                Controls
+            </h2>
+
+            <div class="space-y-4">
+                <button
+                    id="toggle-sim-btn"
+                    class="w-full py-3 rounded-lg font-bold transition duration-200 shadow-md bg-green-600 hover:bg-green-700 text-white"
+                >
+                    Start Simulation
+                </button>
+
+                <button
+                    id="reset-sim-btn"
+                    class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition duration-200 shadow-md"
+                >
+                    Reset System
+                </button>
+
+                <div>
+                    <label for="dt-input" class="text-sm font-medium text-gray-300 block mb-1">
+                        Time Step ($\Delta t$):
+                    </label>
+                    <input
+                        id="dt-input"
+                        type="number"
+                        value="0.1"
+                        step="0.005"
+                        min="0.001"
+                        class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-white"
+                    />
+                    <p class="text-xs text-gray-400 mt-1">
+                        Smaller $\Delta t$ = Higher Accuracy (but slower). Recommended: 0.1
+                    </p>
+                </div>
+
+                <div>
+                    <label for="G-input" class="text-sm font-medium text-gray-300 block mb-1">
+                        Gravity Constant (G):
+                    </label>
+                    <input
+                        id="G-input"
+                        type="number"
+                        value="0.001"
+                        step="0.0001"
+                        min="0.0001"
+                        class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-white"
+                    />
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:w-3/4 bg-gray-800 rounded-xl shadow-lg p-1 flex justify-center items-center relative">
+            <canvas
+                id="simulation-canvas"
+                width="800"
+                height="600"
+                class="rounded-lg w-full max-w-full h-auto"
+                style="aspect-ratio: 800/600;"
+            ></canvas>
+            <div id="click-message" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center bg-gray-900 bg-opacity-70 p-4 rounded-lg">
+                <p class="text-lg font-semibold text-yellow-300">
+                    Click on the canvas to add a new celestial body!
+                </p>
+                <p class="text-sm text-gray-400 mt-1">
+                    Note: Click adds body with random mass and small initial velocity.
+                </p>
+            </div>
+        </div>
     </div>
-    <div class="toggles">
-      <label><input type="checkbox" id="showOrbits" checked /> Show orbits</label>
-      <label><input type="checkbox" id="showLabels" checked /> Show labels</label>
-      <label><input type="checkbox" id="showTrails" /> Motion trails</label>
-      <label><input type="checkbox" id="elliptical" /> Elliptical demo</label>
-      <label><input type="checkbox" id="showComet" checked /> Show comet</label>
-      <label><input type="checkbox" id="autoTour" /> Auto tour</label>
+    
+    <div class="max-w-7xl mx-auto mt-6 p-4 bg-gray-800 rounded-xl shadow-lg">
+        <h2 class="text-xl font-semibold text-green-400 mb-2">
+            Current Bodies (<span id="body-count">0</span>)
+        </h2>
+        <div id="bodies-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            </div>
     </div>
-  </div>
 
-  <!-- Planet/Moon info -->
-  <div id="panel">
-    <h2 id="pName">Click an object</h2>
-    <img id="thumb" alt="thumbnail" />
-    <p class="small">Tip: rotate with mouse/touch, scroll to zoom, right-drag to pan.</p>
-    <p id="pFacts">Select a planet, moon, or comet to see details here.</p>
-    <div class="actions">
-      <button id="focusBtn" disabled>🔎 Focus</button>
-      <button id="unfocusBtn" disabled>↩ Reset</button>
-      <button id="centerBtn">☀️ Go to Sun</button>
-    </div>
-  </div>
+    <script>
+        // --- CONSTANTS ---
+        const INITIAL_G = 0.001;
+        const INITIAL_DT = 0.1;
+        const MAX_HISTORY = 400;
+        const SCALE = 5; // Pixels per unit distance
 
-  <div id="credit">Textures © threejs.org examples / NASA · Built with Three.js</div>
+        // --- GLOBAL STATE ---
+        let bodies = [];
+        let isRunning = false;
+        let dt = INITIAL_DT;
+        let G = INITIAL_G;
+        let nextId = 0;
+        let animationFrameId = null;
 
-  <!-- Three.js from CDN -->
-  <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/three@0.158.0/examples/js/controls/OrbitControls.js"></script>
+        // --- DOM ELEMENTS ---
+        const canvas = document.getElementById('simulation-canvas');
+        const ctx = canvas.getContext('2d');
+        const toggleBtn = document.getElementById('toggle-sim-btn');
+        const resetBtn = document.getElementById('reset-sim-btn');
+        const dtInput = document.getElementById('dt-input');
+        const gInput = document.getElementById('G-input');
+        const bodiesListDiv = document.getElementById('bodies-list');
+        const bodyCountSpan = document.getElementById('body-count');
+        const clickMessage = document.getElementById('click-message');
 
-  <script>
-    // ---------- Scene setup ----------
-    const container = document.getElementById('app');
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.appendChild(renderer.domElement);
+        // --- CORE PHYSICS LOGIC (RK4 Implementation) ---
 
-    const scene = new THREE.Scene();
+        const calculateAcceleration = (bodyIndex, currentBodies, G) => {
+            const bodyA = currentBodies[bodyIndex];
+            let accX = 0;
+            let accY = 0;
 
-    // Background stars (inverted sphere)
-    const starTex = new THREE.TextureLoader().load('https://threejs.org/examples/textures/planets/starfield.jpg');
-    const starGeo = new THREE.SphereGeometry(6000, 64, 64);
-    const starMat = new THREE.MeshBasicMaterial({ map: starTex, side: THREE.BackSide });
-    scene.add(new THREE.Mesh(starGeo, starMat));
+            for (let j = 0; j < currentBodies.length; j++) {
+                if (bodyIndex === j) continue;
 
-    const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 20000);
-    camera.position.set(0, 240, 520);
+                const bodyB = currentBodies[j];
+                
+                const dx = bodyB.pos.x - bodyA.pos.x;
+                const dy = bodyB.pos.y - bodyA.pos.y;
+                
+                const distanceSquared = dx * dx + dy * dy;
+                const distance = Math.sqrt(distanceSquared);
 
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
+                if (distance < bodyA.radius * 0.1 || distance < bodyB.radius * 0.1) continue; // Prevent singularity at 0 distance
 
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
+                // F = G * m1 * m2 / r^2
+                const forceMagnitude = (G * bodyA.mass * bodyB.mass) / distanceSquared;
+                
+                // Acceleration magnitude: a = F / m_A
+                const accelerationMagnitude = forceMagnitude / bodyA.mass;
 
-    // Lights: bright sun + faint ambient
-    const sunLight = new THREE.PointLight(0xffffff, 2.2, 0);
-    sunLight.position.set(0,0,0);
-    scene.add(sunLight);
-    scene.add(new THREE.AmbientLight(0x111111));
+                // Resolve vector components (a_x = a * dx/r)
+                const accComponent = accelerationMagnitude / distance;
+                
+                accX += accComponent * dx;
+                accY += accComponent * dy;
+            }
 
-    // ---------- Sun ----------
-    const loader = new THREE.TextureLoader();
-    const sunTex = loader.load('https://threejs.org/examples/textures/planets/sun.jpg');
-    const sun = new THREE.Mesh(new THREE.SphereGeometry(30, 64, 64), new THREE.MeshBasicMaterial({ map: sunTex }));
-    sun.userData = { type:'star', key:'Sun', info:{
-      radiusKm: 696340, description: 'The Sun is a G-type main-sequence star that powers the Solar System.',
-      image: 'https://upload.wikimedia.org/wikipedia/commons/c/c3/Solar_sys8.jpg'
-    }};
-    scene.add(sun);
+            return { x: accX, y: accY };
+        };
 
-    // ---------- Scales ----------
-    const distanceScale = 50; // orbital distance multiplier
-    const sizeScale = 1.2;    // planet size multiplier
+        const rk4Step = (prevBodies, dt, G) => {
+            if (prevBodies.length < 2) return prevBodies;
+            
+            const calculateRate = (tempBodies) => {
+                return tempBodies.map((body, i) => {
+                    const acc = calculateAcceleration(i, tempBodies, G);
+                    return { vel: body.vel, acc: acc };
+                });
+            };
 
-    // ---------- Data ----------
-    const PLANETS = [
-      { key:'Mercury', tex:'https://threejs.org/examples/textures/planets/mercury.jpg', radiusKm:2440,  radius:2.4*sizeScale, distance:0.39*distanceScale, periodY:0.24, tiltDeg:0.01, rotHours:1407.6, image:'https://upload.wikimedia.org/wikipedia/commons/4/4a/Mercury_in_true_color.jpg' },
-      { key:'Venus',   tex:'https://threejs.org/examples/textures/planets/venus.jpg',   radiusKm:6052,  radius:6.0*sizeScale, distance:0.72*distanceScale, periodY:0.62, tiltDeg:177,  rotHours:-5832.5, image:'https://upload.wikimedia.org/wikipedia/commons/e/e5/Venus-real_color.jpg' },
-      { key:'Earth',   tex:'https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg', radiusKm:6371,  radius:6.4*sizeScale, distance:1.00*distanceScale, periodY:1.00, tiltDeg:23.4, rotHours:23.93, image:'https://upload.wikimedia.org/wikipedia/commons/9/97/The_Earth_seen_from_Apollo_17.jpg',
-        moons: [
-          { key:'Moon', radiusKm:1737, radius:1.75*sizeScale, distance: 10, periodDays:27.3, tex:'https://threejs.org/examples/textures/planets/moon_1024.jpg', image:'https://upload.wikimedia.org/wikipedia/commons/e/e1/FullMoon2010.jpg' }
-        ]
-      },
-      { key:'Mars',    tex:'https://threejs.org/examples/textures/planets/mars_1k_color.jpg',    radiusKm:3390,  radius:3.4*sizeScale, distance:1.52*distanceScale, periodY:1.88, tiltDeg:25,   rotHours:24.62, image:'https://upload.wikimedia.org/wikipedia/commons/0/02/OSIRIS_Mars_true_color.jpg' },
-      { key:'Jupiter', tex:'https://threejs.org/examples/textures/planets/jupiter2_1024.jpg',    radiusKm:69911, radius:71.0*sizeScale/10, distance:5.20*distanceScale, periodY:11.86, tiltDeg:3,   rotHours:9.93, image:'https://upload.wikimedia.org/wikipedia/commons/e/e2/Jupiter.jpg',
-        moons: [
-          { key:'Io',        radiusKm:1821, radius:1.9*sizeScale,  distance: 14, periodDays:1.77, tex:'https://upload.wikimedia.org/wikipedia/commons/7/7b/PIA01125_Io_true_color.jpg', image:'https://upload.wikimedia.org/wikipedia/commons/7/7b/PIA01125_Io_true_color.jpg' },
-          { key:'Europa',    radiusKm:1560, radius:1.7*sizeScale,  distance: 18, periodDays:3.55, tex:'https://upload.wikimedia.org/wikipedia/commons/5/54/Europa-moon.jpg', image:'https://upload.wikimedia.org/wikipedia/commons/5/54/Europa-moon.jpg' },
-          { key:'Ganymede',  radiusKm:2634, radius:2.2*sizeScale,  distance: 23, periodDays:7.15, tex:'https://upload.wikimedia.org/wikipedia/commons/5/5a/Ganymede_-_August_29_2021.png', image:'https://upload.wikimedia.org/wikipedia/commons/5/5a/Ganymede_-_August_29_2021.png' },
-          { key:'Callisto',  radiusKm:2410, radius:2.1*sizeScale,  distance: 28, periodDays:16.69, tex:'https://upload.wikimedia.org/wikipedia/commons/8/83/Callisto.jpg', image:'https://upload.wikimedia.org/wikipedia/commons/8/83/Callisto.jpg' }
-        ]
-      },
-      { key:'Saturn',  tex:'https://threejs.org/examples/textures/planets/saturn.jpg',          radiusKm:58232, radius:60.0*sizeScale/10, distance:9.58*distanceScale, periodY:29.46, tiltDeg:27,  rotHours:10.7, rings:true, ringTex:'https://threejs.org/examples/textures/planets/saturnringcolor.jpg', image:'https://upload.wikimedia.org/wikipedia/commons/c/c7/Saturn_during_Equinox.jpg' },
-      { key:'Uranus',  tex:'https://threejs.org/examples/textures/planets/uranus.jpg',          radiusKm:25362, radius:25.0*sizeScale/10, distance:19.2*distanceScale, periodY:84.0,  tiltDeg:97,  rotHours:-17.2, rings:true, ringTex:'https://threejs.org/examples/textures/planets/uranus_ring.png', image:'https://upload.wikimedia.org/wikipedia/commons/3/3d/Uranus2.jpg' },
-      { key:'Neptune', tex:'https://threejs.org/examples/textures/planets/neptune.jpg',         radiusKm:24622, radius:24.0*sizeScale/10, distance:30.1*distanceScale, periodY:164.8, tiltDeg:28,  rotHours:16.1, image:'https://upload.wikimedia.org/wikipedia/commons/5/56/Neptune_Full.jpg' }
-    ];
+            const applyOffset = (rates, factor, prevBodies) => {
+                return prevBodies.map((body, i) => {
+                    return {
+                        ...body,
+                        pos: {
+                            x: body.pos.x + rates[i].vel.x * factor,
+                            y: body.pos.y + rates[i].vel.y * factor
+                        },
+                        vel: {
+                            x: body.vel.x + rates[i].acc.x * factor,
+                            y: body.vel.y + rates[i].acc.y * factor
+                        },
+                    };
+                });
+            };
 
-    // Thumbnail fallbacks
-    const IMAGE_FALLBACK = 'https://upload.wikimedia.org/wikipedia/commons/6/6f/Deep_Space.jpg';
+            // K1 = f(S)
+            const k1_rates = calculateRate(prevBodies);
+            
+            // K2 = f(S + dt/2 * K1)
+            const k2_state = applyOffset(k1_rates, dt / 2, prevBodies);
+            const k2_rates = calculateRate(k2_state);
+            
+            // K3 = f(S + dt/2 * K2)
+            const k3_state = applyOffset(k2_rates, dt / 2, prevBodies);
+            const k3_rates = calculateRate(k3_state);
+            
+            // K4 = f(S + dt * K3)
+            const k4_state = applyOffset(k3_rates, dt, prevBodies);
+            const k4_rates = calculateRate(k4_state);
 
-    // ---------- Helpers ----------
-    function makeOrbit(radius){
-      const segments = 256;
-      const geo = new THREE.BufferGeometry();
-      const pos = new Float32Array((segments+1)*3);
-      for(let i=0;i<=segments;i++){
-        const t = (i/segments)*Math.PI*2;
-        pos[i*3+0] = Math.cos(t)*radius;
-        pos[i*3+1] = 0;
-        pos[i*3+2] = Math.sin(t)*radius;
-      }
-      geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
-      return new THREE.Line(geo, new THREE.LineBasicMaterial({ color:0x444444, transparent:true, opacity:0.65 }));
-    }
+            // Final update: S_new = S_old + dt/6 * (K1 + 2*K2 + 2*K3 + K4)
+            return prevBodies.map((body, i) => {
+                const avgVelX = (k1_rates[i].vel.x + 2 * k2_rates[i].vel.x + 2 * k3_rates[i].vel.x + k4_rates[i].vel.x) / 6;
+                const avgVelY = (k1_rates[i].vel.y + 2 * k2_rates[i].vel.y + 2 * k3_rates[i].vel.y + k4_rates[i].vel.y) / 6;
+                const avgAccX = (k1_rates[i].acc.x + 2 * k2_rates[i].acc.x + 2 * k3_rates[i].acc.x + k4_rates[i].acc.x) / 6;
+                const avgAccY = (k1_rates[i].acc.y + 2 * k2_rates[i].acc.y + 2 * k3_rates[i].acc.y + k4_rates[i].acc.y) / 6;
 
-    const labelsContainer = document.createElement('div');
-    labelsContainer.style.position = 'fixed';
-    labelsContainer.style.inset = '0';
-    labelsContainer.style.pointerEvents = 'none';
-    document.body.appendChild(labelsContainer);
+                const newPos = {
+                    x: body.pos.x + avgVelX * dt,
+                    y: body.pos.y + avgVelY * dt
+                };
+                const newVel = {
+                    x: body.vel.x + avgAccX * dt,
+                    y: body.vel.y + avgAccY * dt
+                };
 
-    function makeLabel(text){
-      const el = document.createElement('div');
-      el.className = 'label';
-      el.textContent = text;
-      labelsContainer.appendChild(el);
-      return el;
-    }
+                const newHistory = [...body.history, newPos];
+                if (newHistory.length > MAX_HISTORY) {
+                    newHistory.shift();
+                }
 
-    // Trails: simple buffered line per object
-    function Trail(maxPoints=600){
-      const geo = new THREE.BufferGeometry();
-      const positions = new Float32Array(maxPoints*3);
-      geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
-      const mat = new THREE.LineBasicMaterial({ color:0x88aaff, transparent:true, opacity:0.6 });
-      const line = new THREE.Line(geo, mat);
-      line.frustumCulled = false;
-      return { line, positions, maxPoints, head:0, filled:false };
-    }
-    function pushTrail(trail, v){
-      const i = trail.head % trail.maxPoints;
-      trail.positions[i*3+0] = v.x;
-      trail.positions[i*3+1] = v.y;
-      trail.positions[i*3+2] = v.z;
-      trail.head++;
-      if (trail.head >= trail.maxPoints) trail.filled = true;
-      const attr = trail.line.geometry.getAttribute('position');
-      attr.needsUpdate = true;
-      trail.line.geometry.setDrawRange(0, trail.filled ? trail.maxPoints : trail.head);
-    }
-    function clearTrail(trail){
-      trail.head = 0; trail.filled = false;
-      trail.line.geometry.setDrawRange(0, 0);
-    }
+                return {
+                    ...body,
+                    pos: newPos,
+                    vel: newVel,
+                    history: newHistory
+                };
+            });
+        };
 
-    // ---------- Build system (planets, moons) ----------
-    const objects = []; // clickable: {type, key, mesh, def, orbit, angle, label, trail?}
-    const planetGroups = []; // to manage moons relative orbits
+        // --- RENDERING & UI UPDATE ---
 
-    PLANETS.forEach(planet => {
-      const group = new THREE.Group(); // center at sun, holds planet + moons
-      scene.add(group);
-
-      const pMat = new THREE.MeshPhongMaterial({ map: loader.load(planet.tex) });
-      const pMesh = new THREE.Mesh(new THREE.SphereGeometry(planet.radius, 48, 48), pMat);
-      pMesh.rotation.z = (planet.tiltDeg||0)*Math.PI/180;
-      pMesh.position.set(planet.distance, 0, 0);
-      group.add(pMesh);
-
-      // Rings
-      if (planet.rings){
-        const ringTex = loader.load(planet.ringTex);
-        const ring = new THREE.Mesh(
-          new THREE.RingGeometry(planet.radius*1.6, planet.radius*2.5, 128),
-          new THREE.MeshBasicMaterial({ map: ringTex, side: THREE.DoubleSide, transparent:true, opacity:0.9 })
-        );
-        ring.rotation.x = Math.PI/2;
-        pMesh.add(ring);
-      }
-
-      // Orbit line around Sun
-      const orbit = makeOrbit(planet.distance);
-      scene.add(orbit);
-
-      // Label
-      const label = makeLabel(planet.key);
-
-      // Trail
-      const trail = Trail(700);
-      scene.add(trail.line);
-
-      const entry = { type:'planet', key:planet.key, mesh:pMesh, def:planet, orbit, angle: Math.random()*Math.PI*2, label, group, trail };
-      pMesh.userData = entry;
-      objects.push(entry);
-      planetGroups.push(entry);
-
-      // Moons
-      if (planet.moons){
-        planet.moons.forEach(moon => {
-          const mTex = moon.tex ? loader.load(moon.tex) : null;
-          const mMat = mTex ? new THREE.MeshPhongMaterial({ map:mTex }) : new THREE.MeshPhongMaterial({ color:0xaaaaaa });
-          const mMesh = new THREE.Mesh(new THREE.SphereGeometry(moon.radius, 36, 36), mMat);
-          mMesh.position.set(planet.distance + moon.distance, 0, 0);
-          scene.add(mMesh); // Keep world-anchored for simpler trails (we update absolute pos each frame)
-
-          const mOrbit = makeOrbit(planet.distance + moon.distance);
-          scene.add(mOrbit);
-
-          const mLabel = makeLabel(moon.key);
-          const mTrail = Trail(500);
-          scene.add(mTrail.line);
-
-          const mEntry = { type:'moon', parent:entry, key:moon.key, mesh:mMesh, def:{...moon, image: moon.image||IMAGE_FALLBACK}, orbit:mOrbit, angle:Math.random()*Math.PI*2, label:mLabel, trail:mTrail };
-          mMesh.userData = mEntry;
-          objects.push(mEntry);
+        const simToCanvas = (x, y) => ({
+            x: canvas.width / 2 + x * SCALE,
+            y: canvas.height / 2 - y * SCALE // Flip Y
         });
-      }
-    });
 
-    // ---------- Comet (Halley-style) ----------
-    const comet = {
-      key:'Comet Halley',
-      perihelion: 0.6*distanceScale,
-      aphelion: 35*distanceScale,
-      inclination: 162 * Math.PI/180, // retrograde-ish
-      periodY: 75, radius: 1.5*sizeScale,
-      tex: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/Comet_Halley_-_1986.jpg',
-      image: 'https://upload.wikimedia.org/wikipedia/commons/1/1f/Comet_Halley_-_1986.jpg'
-    };
+        const draw = (currentBodies) => {
+            if (!ctx) return;
 
-    // Comet nucleus
-    const cometMat = new THREE.MeshPhongMaterial({ color:0xffffff });
-    const cometMesh = new THREE.Mesh(new THREE.SphereGeometry(comet.radius, 24, 24), cometMat);
-    scene.add(cometMesh);
-    const cometLabel = makeLabel('Comet Halley');
+            const width = canvas.width;
+            const height = canvas.height;
 
-    // Simple tail as particle billboards along velocity direction
-    const tailCount = 200;
-    const tailGeom = new THREE.BufferGeometry();
-    const tailPos = new Float32Array(tailCount*3);
-    tailGeom.setAttribute('position', new THREE.BufferAttribute(tailPos,3));
-    const tailMat = new THREE.PointsMaterial({ color:0x99ccff, size: 1.6, transparent:true, opacity:0.9 });
-    const tailPoints = new THREE.Points(tailGeom, tailMat);
-    scene.add(tailPoints);
+            // Clear canvas
+            ctx.fillStyle = '#030712';
+            ctx.fillRect(0, 0, width, height);
 
-    const cometTrail = Trail(900);
-    scene.add(cometTrail.line);
+            currentBodies.forEach(body => {
+                const pixelPos = simToCanvas(body.pos.x, body.pos.y);
 
-    // ---------- UI wiring ----------
-    const btn = document.getElementById('toggle');
-    const speedRange = document.getElementById('speed');
-    const speedVal = document.getElementById('speedVal');
-    const showOrbits = document.getElementById('showOrbits');
-    const showLabels = document.getElementById('showLabels');
-    const showTrails = document.getElementById('showTrails');
-    const elliptical = document.getElementById('elliptical');
-    const showComet = document.getElementById('showComet');
-    const autoTour = document.getElementById('autoTour');
+                // 1. Draw Trajectory History
+                if (body.history.length > 1) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = body.color + '40'; // Semi-transparent trail
+                    ctx.lineWidth = 1;
+                    
+                    const startPoint = simToCanvas(body.history[0].x, body.history[0].y);
+                    ctx.moveTo(startPoint.x, startPoint.y);
 
-    let playing = true;
-    let speedMultiplier = parseFloat(speedRange.value);
-    speedVal.textContent = speedMultiplier.toFixed(2)+'×';
+                    for (let i = 1; i < body.history.length; i++) {
+                        const histPos = simToCanvas(body.history[i].x, body.history[i].y);
+                        ctx.lineTo(histPos.x, histPos.y);
+                    }
+                    ctx.stroke();
+                }
 
-    btn.addEventListener('click', () => {
-      playing = !playing;
-      btn.textContent = playing ? '⏸️ Pause' : '▶️ Play';
-    });
-    speedRange.addEventListener('input', e => {
-      speedMultiplier = parseFloat(e.target.value);
-      speedVal.textContent = speedMultiplier.toFixed(2)+'×';
-    });
-    showOrbits.addEventListener('change', () => {
-      objects.forEach(o => o.orbit && (o.orbit.visible = showOrbits.checked));
-    });
-    showLabels.addEventListener('change', () => {
-      objects.forEach(o => o.label.style.display = showLabels.checked ? 'block' : 'none');
-      cometLabel.style.display = showLabels.checked && showComet.checked ? 'block' : 'none';
-    });
-    showTrails.addEventListener('change', () => {
-      if (!showTrails.checked){
-        objects.forEach(o => o.trail && clearTrail(o.trail));
-        clearTrail(cometTrail);
-      }
-    });
-    showComet.addEventListener('change', () => {
-      cometMesh.visible = showComet.checked;
-      tailPoints.visible = showComet.checked;
-      cometLabel.style.display = (showComet.checked && showLabels.checked) ? 'block' : 'none';
-      cometTrail.line.visible = (showComet.checked && showTrails.checked);
-    });
+                // 2. Draw the Body
+                ctx.beginPath();
+                ctx.arc(pixelPos.x, pixelPos.y, body.radius, 0, Math.PI * 2);
+                ctx.fillStyle = body.color;
+                ctx.shadowColor = body.color;
+                ctx.shadowBlur = body.radius * 2;
+                ctx.fill();
+                ctx.shadowBlur = 0; // Reset shadow
+            });
+        };
 
-    // ---------- Info panel ----------
-    const pName = document.getElementById('pName');
-    const pFacts = document.getElementById('pFacts');
-    const focusBtn = document.getElementById('focusBtn');
-    const unfocusBtn = document.getElementById('unfocusBtn');
-    const centerBtn = document.getElementById('centerBtn');
-    const thumb = document.getElementById('thumb');
+        const updateBodyList = () => {
+            bodyCountSpan.textContent = bodies.length;
+            bodiesListDiv.innerHTML = bodies.map(body => `
+                <div class="p-3 bg-gray-700 rounded-lg text-xs border-l-4" style="border-color: ${body.color};">
+                    <span class="font-bold text-gray-100">Body ${body.id === 0 ? 'Star' : body.id}</span>
+                    <ul class="list-disc pl-4 mt-1 space-y-0.5">
+                        <li>Mass: ${body.mass.toFixed(1)}</li>
+                        <li>Pos: (${body.pos.x.toFixed(1)}, ${body.pos.y.toFixed(1)})</li>
+                        <li>Vel: (${body.vel.x.toFixed(2)}, ${body.vel.y.toFixed(2)})</li>
+                    </ul>
+                </div>
+            `).join('');
+        };
 
-    let selected = null;
-    function setSelected(obj){
-      selected = obj;
-      if (!obj){
-        pName.textContent = 'Click an object';
-        pFacts.textContent = 'Select a planet, moon, or comet to see details here.';
-        thumb.style.display = 'none';
-        focusBtn.disabled = true;
-        unfocusBtn.disabled = true;
-        return;
-      }
-      pName.textContent = obj.key;
-      const d = obj.def || obj.info || {};
-      const radiusKm = d.radiusKm ? `${d.radiusKm.toLocaleString()} km` : (obj.type==='comet' ? '~5–15 km (nucleus)' : '—');
-      const semiAU = (d.distance ? (d.distance/distanceScale).toFixed(2)+' AU' :
-                       obj.type==='comet' ? `q≈${(comet.perihelion/distanceScale).toFixed(2)} AU, Q≈${(comet.aphelion/distanceScale).toFixed(1)} AU` :
-                       '—');
-      const period = d.periodY ? `${d.periodY} Earth years` : (d.periodDays ? `${d.periodDays} days` : (obj.type==='comet' ? `${comet.periodY} years` : '—'));
-      const tilt = d.tiltDeg != null ? `${d.tiltDeg}°` : '—';
-      const rot = d.rotHours != null ? `${Math.abs(d.rotHours)} hours ${d.rotHours<0?'(retrograde)':''}` : (obj.type==='comet' ? '—' : '—');
+        const updateControls = () => {
+            if (isRunning) {
+                toggleBtn.textContent = 'Pause Simulation';
+                toggleBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                toggleBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-gray-900');
+                clickMessage.classList.add('hidden');
+                canvas.style.cursor = 'default';
+            } else {
+                toggleBtn.textContent = 'Start Simulation';
+                toggleBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-gray-900');
+                toggleBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                clickMessage.classList.remove('hidden');
+                canvas.style.cursor = 'crosshair';
+            }
+        };
 
-      pFacts.innerHTML =
-        `<b>Type:</b> ${obj.type[0].toUpperCase()+obj.type.slice(1)}<br>` +
-        `<b>Mean radius:</b> ${radiusKm}<br>` +
-        `<b>Semi-major axis:</b> ${semiAU}<br>` +
-        `<b>Orbital period:</b> ${period}<br>` +
-        `<b>Axial tilt:</b> ${tilt}<br>` +
-        `<b>Rotation:</b> ${rot}`;
+        // --- GAME LOOP & HANDLERS ---
 
-      const imgUrl = d.image || IMAGE_FALLBACK;
-      thumb.src = imgUrl;
-      thumb.style.display = 'block';
+        const gameLoop = () => {
+            if (isRunning && bodies.length >= 2) {
+                bodies = rk4Step(bodies, dt, G);
+                updateBodyList();
+            }
+            draw(bodies);
+            animationFrameId = requestAnimationFrame(gameLoop);
+        };
 
-      focusBtn.disabled = false;
-      unfocusBtn.disabled = false;
-    }
+        const initSimulation = () => {
+            // Initial Demo Setup (Sun and orbiting planet)
+            const initialBodies = [
+                {
+                    id: 0, mass: 2000, radius: 10, color: '#FFD700', // Star
+                    pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, history: [{ x: 0, y: 0 }]
+                },
+                {
+                    id: 1, mass: 100, radius: 4, color: '#00BFFF', // Planet
+                    pos: { x: 100, y: 0 }, vel: { x: 0, y: 0 }, history: [{ x: 100, y: 0 }]
+                },
+            ];
+            
+            // Calculate initial velocity for a stable circular orbit (v = sqrt(G*M/r))
+            const r = 100;
+            const starMass = initialBodies[0].mass;
+            const v = Math.sqrt(INITIAL_G * starMass / r);
+            initialBodies[1].vel.y = v; 
+            
+            bodies = initialBodies;
+            nextId = initialBodies.length;
+            dt = INITIAL_DT;
+            G = INITIAL_G;
+            dtInput.value = INITIAL_DT;
+            gInput.value = INITIAL_G;
+            isRunning = false;
 
-    function focusOnSelected(){
-      if (!selected) return;
-      const target = selected.mesh.getWorldPosition(new THREE.Vector3());
-      controls.target.copy(target);
-      const dir = new THREE.Vector3().subVectors(camera.position, target).normalize();
-      camera.position.copy(target.clone().add(dir.multiplyScalar( (selected.def?.radius||2)*12 + 40 )));
-    }
-    function resetView(){
-      controls.target.set(0,0,0);
-      camera.position.set(0, 240, 520);
-    }
-    function focusSun(){
-      controls.target.set(0,0,0);
-      const dir = new THREE.Vector3(0,0,1);
-      camera.position.copy(dir.multiplyScalar(140));
-    }
-    focusBtn.addEventListener('click', focusOnSelected);
-    unfocusBtn.addEventListener('click', resetView);
-    centerBtn.addEventListener('click', focusSun);
+            updateControls();
+            updateBodyList();
+            draw(bodies); // Initial draw
+        };
 
-    // ---------- Click picking ----------
-    function onPointer(ev){
-      const rect = renderer.domElement.getBoundingClientRect();
-      mouse.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-      const meshes = objects.map(o => o.mesh).concat([sun, cometMesh]);
-      const hits = raycaster.intersectObjects(meshes, false);
-      if (hits.length){
-        const hit = hits[0].object;
-        if (hit === sun){
-          setSelected(sun.userData);
-        } else if (hit === cometMesh){
-          setSelected({ type:'comet', key:comet.key, mesh:cometMesh, def:{}, info:{}, label:cometLabel });
-        } else {
-          setSelected(hit.userData);
+        const toggleSimulation = () => {
+            isRunning = !isRunning;
+            updateControls();
+        };
+
+        const handleCanvasClick = (event) => {
+            if (isRunning) return;
+
+            const rect = canvas.getBoundingClientRect();
+            
+            // Convert screen pixels to simulation coordinates
+            const pixelX = event.clientX - rect.left;
+            const pixelY = event.clientY - rect.top;
+            const simX = (pixelX - canvas.width / 2) / SCALE;
+            const simY = (canvas.height / 2 - pixelY) / SCALE; // Remember Y is flipped in canvas
+
+            // Create new body
+            const newBody = {
+                id: nextId,
+                mass: Math.random() * 50 + 50, // Mass between 50 and 100
+                radius: Math.random() * 2 + 3, // Radius between 3 and 5
+                color: '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
+                pos: { x: simX, y: simY },
+                // Give it a small, random velocity initially
+                vel: { x: (Math.random() - 0.5) * 5, y: (Math.random() - 0.5) * 5 },
+                history: [{ x: simX, y: simY }]
+            };
+            
+            bodies.push(newBody);
+            nextId++;
+            updateBodyList();
+            draw(bodies);
+        };
+
+        // --- EVENT LISTENERS ---
+
+        toggleBtn.addEventListener('click', toggleSimulation);
+        resetBtn.addEventListener('click', initSimulation);
+        canvas.addEventListener('click', handleCanvasClick);
+
+        dtInput.addEventListener('input', (e) => {
+            dt = parseFloat(e.target.value) || 0;
+        });
+
+        gInput.addEventListener('input', (e) => {
+            G = parseFloat(e.target.value) || 0;
+        });
+        
+        // --- INITIALIZATION ---
+        window.onload = function () {
+            // Match canvas width to container size for responsiveness
+            const container = canvas.parentElement;
+            if (container) {
+                canvas.width = container.clientWidth - 2; // -2 for padding safety
+                canvas.height = (canvas.width / 800) * 600; // Maintain 800:600 aspect ratio
+            }
+
+            initSimulation();
+            gameLoop();
         }
-      }
-    }
-    renderer.domElement.addEventListener('pointerdown', onPointer);
 
-    // ---------- Animation ----------
-    const clock = new THREE.Clock();
-
-    // For comet parametric position (simple Kepler-like approximation)
-    let cometAngle = Math.random()*Math.PI*2;
-    function cometPos(t){
-      // elliptical radius as function of angle (polar form): r = a(1 - e^2) / (1 + e cos θ)
-      const a = (comet.perihelion + comet.aphelion)/2;
-      const e = (comet.aphelion - comet.perihelion)/(comet.aphelion + comet.perihelion);
-      const r = (a*(1 - e*e)) / (1 + e*Math.cos(cometAngle));
-      // rotate plane by inclination
-      const x = r*Math.cos(cometAngle);
-      const z = r*Math.sin(cometAngle);
-      const y = Math.sin(comet.inclination) * z;
-      const z2 = Math.cos(comet.inclination) * z;
-      return new THREE.Vector3(x, y, z2);
-    }
-
-    function updateLabels(){
-      objects.forEach(o => {
-        const pos = o.mesh.getWorldPosition(new THREE.Vector3());
-        const proj = pos.clone().project(camera);
-        const x = (proj.x * 0.5 + 0.5) * window.innerWidth;
-        const y = (-proj.y * 0.5 + 0.5) * window.innerHeight;
-        o.label.style.left = x + 'px';
-        o.label.style.top = y + 'px';
-        o.label.style.display = showLabels.checked ? 'block' : 'none';
-      });
-      // comet label
-      const cpos = cometMesh.getWorldPosition(new THREE.Vector3()).clone().project(camera);
-      const cx = (cpos.x * 0.5 + 0.5) * window.innerWidth;
-      const cy = (-cpos.y * 0.5 + 0.5) * window.innerHeight;
-      cometLabel.style.left = cx + 'px';
-      cometLabel.style.top = cy + 'px';
-      cometLabel.style.display = (showLabels.checked && showComet.checked) ? 'block' : 'none';
-    }
-
-    window.addEventListener('resize', () => {
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-    });
-
-    // Auto tour (focuses each planet briefly)
-    let tourIdx = 0, tourTimer = 0;
-    function autoTourStep(dt){
-      if (!autoTour.checked) return;
-      tourTimer -= dt;
-      if (tourTimer <= 0){
-        const candidates = objects.filter(o => o.type==='planet');
-        const target = candidates[tourIdx % candidates.length];
-        setSelected(target);
-        focusOnSelected();
-        tourIdx++;
-        tourTimer = 6; // seconds per stop
-      }
-    }
-
-    function animate(){
-      requestAnimationFrame(animate);
-      const dt = clock.getDelta();
-
-      if (playing){
-        // Planets
-        planetGroups.forEach(o => {
-          const year = o.def.periodY;
-          const angVel = (2*Math.PI) / (year*20); // tuned rate
-          o.angle += angVel * dt * speedMultiplier;
-          // Position
-          if (elliptical.checked){
-            const a = o.def.distance*1.0, b = o.def.distance*0.92;
-            o.mesh.position.set(Math.cos(o.angle)*a, 0, Math.sin(o.angle)*b);
-          } else {
-            o.mesh.position.set(Math.cos(o.angle)*o.def.distance, 0, Math.sin(o.angle)*o.def.distance);
-          }
-          // Self-rotation
-          const spin = (2*Math.PI) / (Math.abs(o.def.rotHours) || 24);
-          o.mesh.rotation.y += Math.sign(o.def.rotHours || 1) * spin * dt * 0.5;
-
-          // Planet trail
-          if (showTrails.checked){
-            pushTrail(o.trail, o.mesh.getWorldPosition(new THREE.Vector3()));
-          }
-          o.trail.line.visible = showTrails.checked;
-        });
-
-        // Moons (absolute orbit around sun for simpler labels/trails)
-        objects.forEach(o => {
-          if (o.type!=='moon') return;
-          const parent = o.parent;
-          const days = o.def.periodDays || 28;
-          const angVel = (2*Math.PI) / (days/10); // sped up for visibility
-          o.angle += angVel * dt * speedMultiplier;
-          const base = parent.mesh.position;
-          const r = (parent.def.distance) + o.def.distance;
-          o.mesh.position.set(base.x + Math.cos(o.angle)*o.def.distance, 0, base.z + Math.sin(o.angle)*o.def.distance);
-
-          // moon trail
-          if (showTrails.checked){
-            pushTrail(o.trail, o.mesh.getWorldPosition(new THREE.Vector3()));
-          }
-          o.trail.line.visible = showTrails.checked;
-
-          // show/hide moon orbits with global toggle
-          o.orbit.visible = showOrbits.checked;
-        });
-
-        // Comet
-        if (showComet.checked){
-          const cometVel = (2*Math.PI)/(comet.periodY*20);
-          cometAngle += cometVel * dt * speedMultiplier * 4; // faster for fun
-          const p = cometPos(cometAngle);
-          cometMesh.position.copy(p);
-
-          // Tail: place points behind direction of motion
-          const pPrev = cometPos(cometAngle - 0.02);
-          const dir = new THREE.Vector3().subVectors(p, pPrev).normalize();
-          for (let i=tailCount-1; i>0; i--){
-            tailPos[i*3+0] = tailPos[(i-1)*3+0];
-            tailPos[i*3+1] = tailPos[(i-1)*3+1];
-            tailPos[i*3+2] = tailPos[(i-1)*3+2];
-          }
-          tailPos[0] = p.x - dir.x*3; tailPos[1] = p.y - dir.y*3; tailPos[2] = p.z - dir.z*3;
-          tailGeom.attributes.position.needsUpdate = true;
-
-          // comet trail
-          if (showTrails.checked){
-            pushTrail(cometTrail, p);
-          }
-          cometTrail.line.visible = showTrails.checked;
-        }
-      } else {
-        // paused -> do nothing
-      }
-
-      autoTourStep(dt);
-      controls.update();
-      renderer.render(scene, camera);
-      updateLabels();
-    }
-    animate();
-
-    // Defaults visibility
-    objects.forEach(o => o.orbit && (o.orbit.visible = showOrbits.checked));
-    objects.forEach(o => o.label.style.display = showLabels.checked ? 'block' : 'none');
-    cometMesh.visible = showComet.checked;
-    tailPoints.visible = showComet.checked;
-    cometLabel.style.display = (showLabels.checked && showComet.checked) ? 'block' : 'none';
-    cometTrail.line.visible = (showComet.checked && showTrails.checked);
-  </script>
+    </script>
 </body>
 </html>
+```eof
+    
