@@ -362,29 +362,20 @@
             animationFrameId = requestAnimationFrame(gameLoop);
         };
 
-        // REPLACEMENT CODE: Starts with only the Sun, allowing you to add all other bodies.
-const initSimulation = () => {
-    // Initial Demo Setup (Sun only)
-    const initialBodies = [
-        {
-            id: 0, mass: 2000, radius: 20, color: '#FFD700', // Star (Sun)
-            pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, history: [{ x: 0, y: 0 }],
-            rotationAngle: 0, spinRate: 0 
-        }
-    ];
-    
-    bodies = initialBodies;
-    nextId = initialBodies.length; // nextId will be 1
-    dt = INITIAL_DT;
-    G = INITIAL_G;
-    dtInput.value = INITIAL_DT;
-    gInput.value = INITIAL_G;
-    isRunning = false;
-
-    updateControls();
-    updateBodyList();
-    draw(bodies); // Initial draw
-};
+        const initSimulation = () => {
+            // Initial Demo Setup (Sun and orbiting planet)
+            const initialBodies = [
+                {
+                    id: 0, mass: 2000, radius: 20, color: '#FFD700', // Star (Radius increased to 20)
+                    pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, history: [{ x: 0, y: 0 }],
+                    rotationAngle: 0, spinRate: 0 // Star does not visibly spin
+                },
+                {
+                    id: 1, mass: 100, radius: 8, color: '#00BFFF', // Planet (Radius increased to 8)
+                    pos: { x: 100, y: 0 }, vel: { x: 0, y: 0 }, history: [{ x: 100, y: 0 }],
+                    rotationAngle: 0, spinRate: 0.8 // Added spin rate for rotation
+                },
+            ];
             
             // Calculate initial velocity for a stable circular orbit (v = sqrt(G*M/r))
             const r = 100;
