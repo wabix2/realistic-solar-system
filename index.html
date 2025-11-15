@@ -235,11 +235,16 @@
                     newHistory.shift();
                 }
 
+                // Update rotational angle (spin)
+                // The body needs to have a spinRate property (added in initSimulation/handleCanvasClick)
+                const newRotation = (body.rotationAngle + (body.spinRate * dt)) % (2 * Math.PI);
+
                 return {
                     ...body,
                     pos: newPos,
                     vel: newVel,
-                    history: newHistory
+                    history: newHistory,
+                    rotationAngle: newRotation, // Store new rotation
                 };
             });
         };
@@ -280,13 +285,35 @@
                     ctx.stroke();
                 }
 
-                // 2. Draw the Body
-                ctx.beginPath();
-                ctx.arc(pixelPos.x, pixelPos.y, body.radius, 0, Math.PI * 2);
-                ctx.fillStyle = body.color;
+                // 2. Draw the Body (with rotation for non-star bodies)
+                const radius = body.radius;
+                
+                // Set shadow effect
                 ctx.shadowColor = body.color;
-                ctx.shadowBlur = body.radius * 2;
-                ctx.fill();
+                ctx.shadowBlur = radius * 2;
+                
+                if (body.id === 0) {
+                    // Draw Star (Simple bright circle) - Radius: 20
+                    ctx.beginPath();
+                    ctx.arc(pixelPos.x, pixelPos.y, radius, 0, Math.PI * 2);
+                    ctx.fillStyle = body.color;
+                    ctx.fill();
+                } else {
+                    // Draw Planet/Body with visible rotation (Pac-Man shape) - Radius: 8-10+
+                    
+                    // The "mouth" opening will track the rotation angle
+                    // This creates a visual gap to show the spin
+                    const startAngle = body.rotationAngle - Math.PI / 8; 
+                    const endAngle = body.rotationAngle + (2 * Math.PI - Math.PI / 8); 
+
+                    ctx.beginPath();
+                    ctx.arc(pixelPos.x, pixelPos.y, radius, startAngle, endAngle);
+                    ctx.lineTo(pixelPos.x, pixelPos.y);
+                    ctx.closePath();
+                    ctx.fillStyle = body.color;
+                    ctx.fill();
+                }
+
                 ctx.shadowBlur = 0; // Reset shadow
             });
         };
@@ -295,9 +322,10 @@
             bodyCountSpan.textContent = bodies.length;
             bodiesListDiv.innerHTML = bodies.map(body => `
                 <div class="p-3 bg-gray-700 rounded-lg text-xs border-l-4" style="border-color: ${body.color};">
-                    <span class="font-bold text-gray-100">Body ${body.id === 0 ? 'Star' : body.id}</span>
+                    <span class="font-bold text-gray-100">Body ${body.id === 0 ? 'Star (Sun)' : body.id}</span>
                     <ul class="list-disc pl-4 mt-1 space-y-0.5">
                         <li>Mass: ${body.mass.toFixed(1)}</li>
+                        <li>Radius: ${body.radius.toFixed(1)} (Visual Size)</li>
                         <li>Pos: (${body.pos.x.toFixed(1)}, ${body.pos.y.toFixed(1)})</li>
                         <li>Vel: (${body.vel.x.toFixed(2)}, ${body.vel.y.toFixed(2)})</li>
                     </ul>
@@ -324,11 +352,13 @@
         // --- GAME LOOP & HANDLERS ---
 
         const gameLoop = () => {
+            // Check if the simulation is running and if there are at least two bodies (star and planet)
             if (isRunning && bodies.length >= 2) {
                 bodies = rk4Step(bodies, dt, G);
                 updateBodyList();
             }
             draw(bodies);
+            // Request the next frame for continuous animation
             animationFrameId = requestAnimationFrame(gameLoop);
         };
 
@@ -336,12 +366,14 @@
             // Initial Demo Setup (Sun and orbiting planet)
             const initialBodies = [
                 {
-                    id: 0, mass: 2000, radius: 10, color: '#FFD700', // Star
-                    pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, history: [{ x: 0, y: 0 }]
+                    id: 0, mass: 2000, radius: 20, color: '#FFD700', // Star (Radius increased to 20)
+                    pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, history: [{ x: 0, y: 0 }],
+                    rotationAngle: 0, spinRate: 0 // Star does not visibly spin
                 },
                 {
-                    id: 1, mass: 100, radius: 4, color: '#00BFFF', // Planet
-                    pos: { x: 100, y: 0 }, vel: { x: 0, y: 0 }, history: [{ x: 100, y: 0 }]
+                    id: 1, mass: 100, radius: 8, color: '#00BFFF', // Planet (Radius increased to 8)
+                    pos: { x: 100, y: 0 }, vel: { x: 0, y: 0 }, history: [{ x: 100, y: 0 }],
+                    rotationAngle: 0, spinRate: 0.8 // Added spin rate for rotation
                 },
             ];
             
@@ -383,13 +415,15 @@
             // Create new body
             const newBody = {
                 id: nextId,
-                mass: Math.random() * 50 + 50, // Mass between 50 and 100
-                radius: Math.random() * 2 + 3, // Radius between 3 and 5
+                mass: Math.random() * 100 + 50, // Mass between 50 and 150 (Increased range)
+                radius: Math.random() * 5 + 5, // Radius between 5 and 10 (Increased range)
                 color: '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
                 pos: { x: simX, y: simY },
                 // Give it a small, random velocity initially
                 vel: { x: (Math.random() - 0.5) * 5, y: (Math.random() - 0.5) * 5 },
-                history: [{ x: simX, y: simY }]
+                history: [{ x: simX, y: simY }],
+                rotationAngle: Math.random() * 2 * Math.PI, // Initial random rotation
+                spinRate: Math.random() * 1.5 + 0.5 // Random spin rate between 0.5 and 2.0
             };
             
             bodies.push(newBody);
@@ -428,5 +462,3 @@
     </script>
 </body>
 </html>
-```eof
-    
