@@ -3,463 +3,435 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RK4 Planetary N-Body Simulator</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>2D RK4 N-Body Simulator</title>
     <style>
-        /* Apply the Inter font globally */
-        body { font-family: 'Inter', sans-serif; }
-        
-        /* Ensure the canvas is responsive and centered */
-        #simulation-canvas {
-            background-color: #030712; /* Dark background matches UI */
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            background-color: #1a1a2e; /* Dark space background */
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+        }
+        #controls {
+            width: 280px;
+            padding: 20px;
+            background-color: #1e1e3f;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+        }
+        #simCanvas {
+            flex-grow: 1;
             cursor: crosshair;
-            display: block;
-            border-radius: 0.75rem; /* rounded-xl */
+        }
+        .control-group {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #3a3a6e;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #4a4a9e;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #5a5ac8;
         }
     </style>
 </head>
-<body class="min-h-screen bg-gray-900 text-gray-100 p-4 md:p-8">
+<body>
 
-    <header class="text-center mb-8">
-        <h1 class="text-4xl font-extrabold text-yellow-400">
-            Planetary RK4 Simulation
-        </h1>
-        <p class="text-gray-400 text-sm mt-1">
-            High-accuracy N-Body Simulation using Runge-Kutta 4th Order Integration.
-        </p>
-    </header>
+    <div id="controls">
+        <h1 style="color: #ffcc00; font-size: 1.5rem; margin-bottom: 20px;">N-Body Controls</h1>
 
-    <div class="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto">
-        
-        <div id="controls-panel" class="lg:w-1/4 p-4 bg-gray-800 rounded-xl shadow-lg h-fit">
-            <h2 class="text-xl font-semibold text-indigo-400 mb-4 border-b border-gray-700 pb-2">
-                Controls
-            </h2>
-
-            <div class="space-y-4">
-                <button
-                    id="toggle-sim-btn"
-                    class="w-full py-3 rounded-lg font-bold transition duration-200 shadow-md bg-green-600 hover:bg-green-700 text-white"
-                >
-                    Start Simulation
-                </button>
-
-                <button
-                    id="reset-sim-btn"
-                    class="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition duration-200 shadow-md"
-                >
-                    Reset System
-                </button>
-
-                <div>
-                    <label for="dt-input" class="text-sm font-medium text-gray-300 block mb-1">
-                        Time Step ($\Delta t$):
-                    </label>
-                    <input
-                        id="dt-input"
-                        type="number"
-                        value="0.1"
-                        step="0.005"
-                        min="0.001"
-                        class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-white"
-                    />
-                    <p class="text-xs text-gray-400 mt-1">
-                        Smaller $\Delta t$ = Higher Accuracy (but slower). Recommended: 0.1
-                    </p>
-                </div>
-
-                <div>
-                    <label for="G-input" class="text-sm font-medium text-gray-300 block mb-1">
-                        Gravity Constant (G):
-                    </label>
-                    <input
-                        id="G-input"
-                        type="number"
-                        value="0.001"
-                        step="0.0001"
-                        min="0.0001"
-                        class="w-full p-2 bg-gray-700 border border-gray-600 rounded-md text-sm text-white"
-                    />
-                </div>
-            </div>
+        <div class="control-group">
+            <label for="massSlider" style="display: block; margin-bottom: 5px;">New Body Mass:</label>
+            <input type="range" id="massSlider" min="5" max="500" value="50" step="5" style="width: 100%;">
+            <p style="text-align: center; font-weight: bold;"><span id="currentMass">Mass: 50</span></p>
         </div>
 
-        <div class="lg:w-3/4 bg-gray-800 rounded-xl shadow-lg p-1 flex justify-center items-center relative">
-            <canvas
-                id="simulation-canvas"
-                width="800"
-                height="600"
-                class="rounded-lg w-full max-w-full h-auto"
-                style="aspect-ratio: 800/600;"
-            ></canvas>
-            <div id="click-message" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center bg-gray-900 bg-opacity-70 p-4 rounded-lg">
-                <p class="text-lg font-semibold text-yellow-300">
-                    Click on the canvas to add a new celestial body!
-                </p>
-                <p class="text-sm text-gray-400 mt-1">
-                    Note: Click adds body with random mass and small initial velocity.
-                </p>
-            </div>
+        <div class="control-group">
+            <p style="margin-bottom: 10px;">**Creation Method:** Click and drag on the canvas. Drag distance determines initial velocity.</p>
+            <button id="clearButton">Clear All Bodies</button>
+        </div>
+
+        <div class="control-group">
+            <label for="timeStep" style="display: block; margin-bottom: 5px;">Time Step ($\Delta t$):</label>
+            <input type="number" id="timeStep" value="0.01" step="0.001" min="0.001" max="0.1" style="width: 100%; padding: 5px; background: #3a3a6e; border: 1px solid #5a5ac8; color: white;">
+        </div>
+
+        <div style="margin-top: 30px;">
+            <p style="color: #00ffaa; font-weight: bold;">Simulation Status:</p>
+            <p>Bodies: <span id="bodyCount">0</span></p>
+            <p>FPS: <span id="fpsDisplay">0</span></p>
+            <p style="margin-top: 10px; font-size: 0.8rem; color: #aaa;">Physics Core: RK4</p>
         </div>
     </div>
-    
-    <div class="max-w-7xl mx-auto mt-6 p-4 bg-gray-800 rounded-xl shadow-lg">
-        <h2 class="text-xl font-semibold text-green-400 mb-2">
-            Current Bodies (<span id="body-count">0</span>)
-        </h2>
-        <div id="bodies-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            </div>
-    </div>
+
+    <canvas id="simCanvas"></canvas>
 
     <script>
-        // --- CONSTANTS ---
-        const INITIAL_G = 0.001;
-        const INITIAL_DT = 0.1;
-        const MAX_HISTORY = 400;
-        const SCALE = 5; // Pixels per unit distance
-
-        // --- GLOBAL STATE ---
-        let bodies = [];
-        let isRunning = false;
-        let dt = INITIAL_DT;
-        let G = INITIAL_G;
-        let nextId = 0;
-        let animationFrameId = null;
-
-        // --- DOM ELEMENTS ---
-        const canvas = document.getElementById('simulation-canvas');
+        // --- Setup ---
+        const canvas = document.getElementById('simCanvas');
         const ctx = canvas.getContext('2d');
-        const toggleBtn = document.getElementById('toggle-sim-btn');
-        const resetBtn = document.getElementById('reset-sim-btn');
-        const dtInput = document.getElementById('dt-input');
-        const gInput = document.getElementById('G-input');
-        const bodiesListDiv = document.getElementById('bodies-list');
-        const bodyCountSpan = document.getElementById('body-count');
-        const clickMessage = document.getElementById('click-message');
+        let bodies = [];
+        let G = 0.000000000066743; // Gravitational Constant (Can be adjusted for visualization scale)
+        let simRunning = true;
 
-        // --- CORE PHYSICS LOGIC (RK4 Implementation) ---
+        // Display/Input Variables
+        let canvasCenter = { x: 0, y: 0 };
+        let dragStartPos = null;
+        let dragEndPos = null;
+        let dragVelocity = null;
+        let isDragging = false;
+        let trailHistoryLength = 400; // Length of the path trail
 
-        const calculateAcceleration = (bodyIndex, currentBodies, G) => {
-            const bodyA = currentBodies[bodyIndex];
-            let accX = 0;
-            let accY = 0;
+        // Get initial values from controls
+        const massSlider = document.getElementById('massSlider');
+        const timeStepInput = document.getElementById('timeStep');
+        const currentMassDisplay = document.getElementById('currentMass');
 
-            for (let j = 0; j < currentBodies.length; j++) {
-                if (bodyIndex === j) continue;
-
-                const bodyB = currentBodies[j];
-                
-                const dx = bodyB.pos.x - bodyA.pos.x;
-                const dy = bodyB.pos.y - bodyA.pos.y;
-                
-                const distanceSquared = dx * dx + dy * dy;
-                const distance = Math.sqrt(distanceSquared);
-
-                if (distance < bodyA.radius * 0.1 || distance < bodyB.radius * 0.1) continue; // Prevent singularity at 0 distance
-
-                // F = G * m1 * m2 / r^2
-                const forceMagnitude = (G * bodyA.mass * bodyB.mass) / distanceSquared;
-                
-                // Acceleration magnitude: a = F / m_A
-                const accelerationMagnitude = forceMagnitude / bodyA.mass;
-
-                // Resolve vector components (a_x = a * dx/r)
-                const accComponent = accelerationMagnitude / distance;
-                
-                accX += accComponent * dx;
-                accY += accComponent * dy;
+        // --- Celestial Body Class (2D) ---
+        class Body {
+            constructor(mass, pos, vel, color = null) {
+                this.mass = mass;
+                this.pos = { x: pos.x, y: pos.y }; // Position (x, y)
+                this.vel = { x: vel.x, y: vel.y }; // Velocity (vx, vy)
+                this.acc = { x: 0, y: 0 };         // Acceleration (ax, ay)
+                this.radius = Math.cbrt(mass) * 0.5 + 2; // Size proportional to mass
+                this.color = color || '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+                this.trail = [];
             }
-
-            return { x: accX, y: accY };
-        };
-
-        const rk4Step = (prevBodies, dt, G) => {
-            if (prevBodies.length < 2) return prevBodies;
-            
-            const calculateRate = (tempBodies) => {
-                return tempBodies.map((body, i) => {
-                    const acc = calculateAcceleration(i, tempBodies, G);
-                    return { vel: body.vel, acc: acc };
-                });
-            };
-
-            const applyOffset = (rates, factor, prevBodies) => {
-                return prevBodies.map((body, i) => {
-                    return {
-                        ...body,
-                        pos: {
-                            x: body.pos.x + rates[i].vel.x * factor,
-                            y: body.pos.y + rates[i].vel.y * factor
-                        },
-                        vel: {
-                            x: body.vel.x + rates[i].acc.x * factor,
-                            y: body.vel.y + rates[i].acc.y * factor
-                        },
-                    };
-                });
-            };
-
-            // K1 = f(S)
-            const k1_rates = calculateRate(prevBodies);
-            
-            // K2 = f(S + dt/2 * K1)
-            const k2_state = applyOffset(k1_rates, dt / 2, prevBodies);
-            const k2_rates = calculateRate(k2_state);
-            
-            // K3 = f(S + dt/2 * K2)
-            const k3_state = applyOffset(k2_rates, dt / 2, prevBodies);
-            const k3_rates = calculateRate(k3_state);
-            
-            // K4 = f(S + dt * K3)
-            const k4_state = applyOffset(k3_rates, dt, prevBodies);
-            const k4_rates = calculateRate(k4_state);
-
-            // Final update: S_new = S_old + dt/6 * (K1 + 2*K2 + 2*K3 + K4)
-            return prevBodies.map((body, i) => {
-                const avgVelX = (k1_rates[i].vel.x + 2 * k2_rates[i].vel.x + 2 * k3_rates[i].vel.x + k4_rates[i].vel.x) / 6;
-                const avgVelY = (k1_rates[i].vel.y + 2 * k2_rates[i].vel.y + 2 * k3_rates[i].vel.y + k4_rates[i].vel.y) / 6;
-                const avgAccX = (k1_rates[i].acc.x + 2 * k2_rates[i].acc.x + 2 * k3_rates[i].acc.x + k4_rates[i].acc.x) / 6;
-                const avgAccY = (k1_rates[i].acc.y + 2 * k2_rates[i].acc.y + 2 * k3_rates[i].acc.y + k4_rates[i].acc.y) / 6;
-
-                const newPos = {
-                    x: body.pos.x + avgVelX * dt,
-                    y: body.pos.y + avgVelY * dt
-                };
-                const newVel = {
-                    x: body.vel.x + avgAccX * dt,
-                    y: body.vel.y + avgAccY * dt
-                };
-
-                const newHistory = [...body.history, newPos];
-                if (newHistory.length > MAX_HISTORY) {
-                    newHistory.shift();
-                }
-
-                // Update rotational angle (spin)
-                // The body needs to have a spinRate property (added in initSimulation/handleCanvasClick)
-                const newRotation = (body.rotationAngle + (body.spinRate * dt)) % (2 * Math.PI);
-
-                return {
-                    ...body,
-                    pos: newPos,
-                    vel: newVel,
-                    history: newHistory,
-                    rotationAngle: newRotation, // Store new rotation
-                };
-            });
-        };
-
-        // --- RENDERING & UI UPDATE ---
-
-        const simToCanvas = (x, y) => ({
-            x: canvas.width / 2 + x * SCALE,
-            y: canvas.height / 2 - y * SCALE // Flip Y
-        });
-
-        const draw = (currentBodies) => {
-            if (!ctx) return;
-
-            const width = canvas.width;
-            const height = canvas.height;
-
-            // Clear canvas
-            ctx.fillStyle = '#030712';
-            ctx.fillRect(0, 0, width, height);
-
-            currentBodies.forEach(body => {
-                const pixelPos = simToCanvas(body.pos.x, body.pos.y);
-
-                // 1. Draw Trajectory History
-                if (body.history.length > 1) {
-                    ctx.beginPath();
-                    ctx.strokeStyle = body.color + '40'; // Semi-transparent trail
-                    ctx.lineWidth = 1;
-                    
-                    const startPoint = simToCanvas(body.history[0].x, body.history[0].y);
-                    ctx.moveTo(startPoint.x, startPoint.y);
-
-                    for (let i = 1; i < body.history.length; i++) {
-                        const histPos = simToCanvas(body.history[i].x, body.history[i].y);
-                        ctx.lineTo(histPos.x, histPos.y);
-                    }
-                    ctx.stroke();
-                }
-
-                // 2. Draw the Body (with rotation for non-star bodies)
-                const radius = body.radius;
-                
-                // Set shadow effect
-                ctx.shadowColor = body.color;
-                ctx.shadowBlur = radius * 2;
-                
-                if (body.id === 0) {
-                    // Draw Star (Simple bright circle) - Radius: 20
-                    ctx.beginPath();
-                    ctx.arc(pixelPos.x, pixelPos.y, radius, 0, Math.PI * 2);
-                    ctx.fillStyle = body.color;
-                    ctx.fill();
-                } else {
-                    // Draw Planet/Body with visible rotation (Pac-Man shape) - Radius: 8-10+
-                    
-                    // The "mouth" opening will track the rotation angle
-                    // This creates a visual gap to show the spin
-                    const startAngle = body.rotationAngle - Math.PI / 8; 
-                    const endAngle = body.rotationAngle + (2 * Math.PI - Math.PI / 8); 
-
-                    ctx.beginPath();
-                    ctx.arc(pixelPos.x, pixelPos.y, radius, startAngle, endAngle);
-                    ctx.lineTo(pixelPos.x, pixelPos.y);
-                    ctx.closePath();
-                    ctx.fillStyle = body.color;
-                    ctx.fill();
-                }
-
-                ctx.shadowBlur = 0; // Reset shadow
-            });
-        };
-
-        const updateBodyList = () => {
-            bodyCountSpan.textContent = bodies.length;
-            bodiesListDiv.innerHTML = bodies.map(body => `
-                <div class="p-3 bg-gray-700 rounded-lg text-xs border-l-4" style="border-color: ${body.color};">
-                    <span class="font-bold text-gray-100">Body ${body.id === 0 ? 'Star (Sun)' : body.id}</span>
-                    <ul class="list-disc pl-4 mt-1 space-y-0.5">
-                        <li>Mass: ${body.mass.toFixed(1)}</li>
-                        <li>Radius: ${body.radius.toFixed(1)} (Visual Size)</li>
-                        <li>Pos: (${body.pos.x.toFixed(1)}, ${body.pos.y.toFixed(1)})</li>
-                        <li>Vel: (${body.vel.x.toFixed(2)}, ${body.vel.y.toFixed(2)})</li>
-                    </ul>
-                </div>
-            `).join('');
-        };
-
-        const updateControls = () => {
-            if (isRunning) {
-                toggleBtn.textContent = 'Pause Simulation';
-                toggleBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
-                toggleBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-gray-900');
-                clickMessage.classList.add('hidden');
-                canvas.style.cursor = 'default';
-            } else {
-                toggleBtn.textContent = 'Start Simulation';
-                toggleBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-gray-900');
-                toggleBtn.classList.add('bg-green-600', 'hover:bg-green-700');
-                clickMessage.classList.remove('hidden');
-                canvas.style.cursor = 'crosshair';
-            }
-        };
-
-        // --- GAME LOOP & HANDLERS ---
-
-        const gameLoop = () => {
-            // Check if the simulation is running and if there are at least two bodies (star and planet)
-            if (isRunning && bodies.length >= 2) {
-                bodies = rk4Step(bodies, dt, G);
-                updateBodyList();
-            }
-            draw(bodies);
-            // Request the next frame for continuous animation
-            animationFrameId = requestAnimationFrame(gameLoop);
-        };
-
-        const initSimulation = () => {
-            // Initial Demo Setup (Sun and orbiting planet)
-            const initialBodies = [
-                {
-                    id: 0, mass: 2000, radius: 20, color: '#FFD700', // Star (Radius increased to 20)
-                    pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 }, history: [{ x: 0, y: 0 }],
-                    rotationAngle: 0, spinRate: 0 // Star does not visibly spin
-                },
-                {
-                    id: 1, mass: 100, radius: 8, color: '#00BFFF', // Planet (Radius increased to 8)
-                    pos: { x: 100, y: 0 }, vel: { x: 0, y: 0 }, history: [{ x: 100, y: 0 }],
-                    rotationAngle: 0, spinRate: 0.8 // Added spin rate for rotation
-                },
-            ];
-            
-            // Calculate initial velocity for a stable circular orbit (v = sqrt(G*M/r))
-            const r = 100;
-            const starMass = initialBodies[0].mass;
-            const v = Math.sqrt(INITIAL_G * starMass / r);
-            initialBodies[1].vel.y = v; 
-            
-            bodies = initialBodies;
-            nextId = initialBodies.length;
-            dt = INITIAL_DT;
-            G = INITIAL_G;
-            dtInput.value = INITIAL_DT;
-            gInput.value = INITIAL_G;
-            isRunning = false;
-
-            updateControls();
-            updateBodyList();
-            draw(bodies); // Initial draw
-        };
-
-        const toggleSimulation = () => {
-            isRunning = !isRunning;
-            updateControls();
-        };
-
-        const handleCanvasClick = (event) => {
-            if (isRunning) return;
-
-            const rect = canvas.getBoundingClientRect();
-            
-            // Convert screen pixels to simulation coordinates
-            const pixelX = event.clientX - rect.left;
-            const pixelY = event.clientY - rect.top;
-            const simX = (pixelX - canvas.width / 2) / SCALE;
-            const simY = (canvas.height / 2 - pixelY) / SCALE; // Remember Y is flipped in canvas
-
-            // Create new body
-            const newBody = {
-                id: nextId,
-                mass: Math.random() * 100 + 50, // Mass between 50 and 150 (Increased range)
-                radius: Math.random() * 5 + 5, // Radius between 5 and 10 (Increased range)
-                color: '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
-                pos: { x: simX, y: simY },
-                // Give it a small, random velocity initially
-                vel: { x: (Math.random() - 0.5) * 5, y: (Math.random() - 0.5) * 5 },
-                history: [{ x: simX, y: simY }],
-                rotationAngle: Math.random() * 2 * Math.PI, // Initial random rotation
-                spinRate: Math.random() * 1.5 + 0.5 // Random spin rate between 0.5 and 2.0
-            };
-            
-            bodies.push(newBody);
-            nextId++;
-            updateBodyList();
-            draw(bodies);
-        };
-
-        // --- EVENT LISTENERS ---
-
-        toggleBtn.addEventListener('click', toggleSimulation);
-        resetBtn.addEventListener('click', initSimulation);
-        canvas.addEventListener('click', handleCanvasClick);
-
-        dtInput.addEventListener('input', (e) => {
-            dt = parseFloat(e.target.value) || 0;
-        });
-
-        gInput.addEventListener('input', (e) => {
-            G = parseFloat(e.target.value) || 0;
-        });
-        
-        // --- INITIALIZATION ---
-        window.onload = function () {
-            // Match canvas width to container size for responsiveness
-            const container = canvas.parentElement;
-            if (container) {
-                canvas.width = container.clientWidth - 2; // -2 for padding safety
-                canvas.height = (canvas.width / 800) * 600; // Maintain 800:600 aspect ratio
-            }
-
-            initSimulation();
-            gameLoop();
         }
 
+        // --- Utility Functions ---
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth - 280; // Subtract control panel width
+            canvas.height = window.innerHeight;
+            canvasCenter.x = canvas.width / 2;
+            canvasCenter.y = canvas.height / 2;
+            // Redraw everything after resize
+            draw();
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function getDistanceSq(b1, b2) {
+            const dx = b2.pos.x - b1.pos.x;
+            const dy = b2.pos.y - b1.pos.y;
+            return dx * dx + dy * dy;
+        }
+
+        function getDirectionVector(b1, b2) {
+            return {
+                x: b2.pos.x - b1.pos.x,
+                y: b2.pos.y - b1.pos.y
+            };
+        }
+
+        function normalizeVector(v) {
+            const magnitude = Math.sqrt(v.x * v.x + v.y * v.y);
+            return {
+                x: v.x / magnitude,
+                y: v.y / magnitude
+            };
+        }
+
+        // --- PHYSICS CORE: RK4 INTEGRATION ---
+
+        /**
+         * Calculates the derivatives (velocities and accelerations) for a set of bodies.
+         * The result is the current velocity (dx/dt) and the acceleration (dv/dt).
+         * @param {Array<Body>} currentBodies - The bodies at the current (or intermediate) state.
+         * @returns {Array<{dPos: {x, y}, dVel: {x, y}}>} The derivatives (k-value).
+         */
+        function calculateDerivatives(currentBodies) {
+            const derivatives = currentBodies.map(b => ({
+                dPos: { x: b.vel.x, y: b.vel.y },
+                dVel: { x: 0, y: 0 }
+            }));
+
+            // Calculate accelerations (dv/dt)
+            for (let i = 0; i < currentBodies.length; i++) {
+                const b_i = currentBodies[i];
+                let accX = 0;
+                let accY = 0;
+
+                for (let j = 0; j < currentBodies.length; j++) {
+                    if (i === j) continue; // Skip self-interaction
+
+                    const b_j = currentBodies[j];
+                    const dir = getDirectionVector(b_i, b_j);
+                    const r_sq = getDistanceSq(b_i, b_j);
+
+                    // Add a small constant to prevent division by zero during close encounters
+                    const safe_r_sq = Math.max(r_sq, 1);
+
+                    // F = G * (m1 * m2) / r^2
+                    // a_i = F / m_i = G * m_j / r^2
+                    const magnitude = (G * b_j.mass) / safe_r_sq;
+                    const unitDir = normalizeVector(dir);
+
+                    accX += magnitude * unitDir.x;
+                    accY += magnitude * unitDir.y;
+                }
+                derivatives[i].dVel.x = accX;
+                derivatives[i].dVel.y = accY;
+            }
+            return derivatives;
+        }
+
+        /**
+         * Clones the bodies array for use in intermediate RK4 calculations.
+         */
+        function cloneBodies(sourceBodies) {
+            return sourceBodies.map(b => new Body(
+                b.mass,
+                { x: b.pos.x, y: b.pos.y },
+                { x: b.vel.x, y: b.vel.y },
+                b.color
+            ));
+        }
+
+        /**
+         * Performs one step of the Runge-Kutta 4th Order numerical integration.
+         */
+        function rk4Step() {
+            if (bodies.length < 2) return;
+
+            const dt = parseFloat(timeStepInput.value);
+            const dt_half = dt * 0.5;
+
+            // K1
+            let k1 = calculateDerivatives(bodies);
+
+            // K2
+            let bodies_k2 = cloneBodies(bodies);
+            for (let i = 0; i < bodies.length; i++) {
+                bodies_k2[i].pos.x = bodies[i].pos.x + k1[i].dPos.x * dt_half;
+                bodies_k2[i].pos.y = bodies[i].pos.y + k1[i].dPos.y * dt_half;
+                bodies_k2[i].vel.x = bodies[i].vel.x + k1[i].dVel.x * dt_half;
+                bodies_k2[i].vel.y = bodies[i].vel.y + k1[i].dVel.y * dt_half;
+            }
+            let k2 = calculateDerivatives(bodies_k2);
+
+            // K3
+            let bodies_k3 = cloneBodies(bodies);
+            for (let i = 0; i < bodies.length; i++) {
+                bodies_k3[i].pos.x = bodies[i].pos.x + k2[i].dPos.x * dt_half;
+                bodies_k3[i].pos.y = bodies[i].pos.y + k2[i].dPos.y * dt_half;
+                bodies_k3[i].vel.x = bodies[i].vel.x + k2[i].dVel.x * dt_half;
+                bodies_k3[i].vel.y = bodies[i].vel.y + k2[i].dVel.y * dt_half;
+            }
+            let k3 = calculateDerivatives(bodies_k3);
+
+            // K4
+            let bodies_k4 = cloneBodies(bodies);
+            for (let i = 0; i < bodies.length; i++) {
+                bodies_k4[i].pos.x = bodies[i].pos.x + k3[i].dPos.x * dt;
+                bodies_k4[i].pos.y = bodies[i].pos.y + k3[i].dPos.y * dt;
+                bodies_k4[i].vel.x = bodies[i].vel.x + k3[i].dVel.x * dt;
+                bodies_k4[i].vel.y = bodies[i].vel.y + k3[i].dVel.y * dt;
+            }
+            let k4 = calculateDerivatives(bodies_k4);
+
+            // Final Update
+            const one_sixth = 1.0 / 6.0;
+            for (let i = 0; i < bodies.length; i++) {
+                const b = bodies[i];
+
+                // Position update: pos += dt/6 * (k1.dPos + 2*k2.dPos + 2*k3.dPos + k4.dPos)
+                b.pos.x += dt * one_sixth * (k1[i].dPos.x + 2 * k2[i].dPos.x + 2 * k3[i].dPos.x + k4[i].dPos.x);
+                b.pos.y += dt * one_sixth * (k1[i].dPos.y + 2 * k2[i].dPos.y + 2 * k3[i].dPos.y + k4[i].dPos.y);
+
+                // Velocity update: vel += dt/6 * (k1.dVel + 2*k2.dVel + 2*k3.dVel + k4.dVel)
+                b.vel.x += dt * one_sixth * (k1[i].dVel.x + 2 * k2[i].dVel.x + 2 * k3[i].dVel.x + k4[i].dVel.x);
+                b.vel.y += dt * one_sixth * (k1[i].dVel.y + 2 * k2[i].dVel.y + 2 * k3[i].dVel.y + k4[i].dVel.y);
+
+                // Update trail
+                b.trail.push({ x: b.pos.x, y: b.pos.y });
+                if (b.trail.length > trailHistoryLength) {
+                    b.trail.shift();
+                }
+            }
+        }
+
+        // --- DRAWING FUNCTIONS ---
+
+        function drawBody(body) {
+            // Convert simulation coordinates to canvas coordinates
+            const screenX = body.pos.x + canvasCenter.x;
+            const screenY = body.pos.y + canvasCenter.y;
+
+            // Draw trail
+            ctx.beginPath();
+            if (body.trail.length > 1) {
+                ctx.moveTo(body.trail[0].x + canvasCenter.x, body.trail[0].y + canvasCenter.y);
+                for (let i = 1; i < body.trail.length; i++) {
+                    // Create fading effect by adjusting opacity based on trail age
+                    const opacity = i / body.trail.length * 0.4;
+                    ctx.strokeStyle = body.color + Math.floor(opacity * 255).toString(16).padStart(2, '0');
+                    ctx.lineTo(body.trail[i].x + canvasCenter.x, body.trail[i].y + canvasCenter.y);
+                }
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            // Draw body itself
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, body.radius, 0, Math.PI * 2, false);
+            ctx.fillStyle = body.color;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = body.color;
+            ctx.fill();
+            ctx.shadowBlur = 0; // Reset shadow
+        }
+
+        function drawCreationPreview() {
+            if (!isDragging || !dragStartPos || !dragEndPos) return;
+
+            const startX = dragStartPos.x - 280; // Adjust for control panel
+            const startY = dragStartPos.y;
+            const endX = dragEndPos.x - 280;
+            const endY = dragEndPos.y;
+
+            const currentMass = parseFloat(massSlider.value);
+            const currentRadius = Math.cbrt(currentMass) * 0.5 + 2;
+
+            // Draw projected body at click location
+            ctx.beginPath();
+            ctx.arc(startX, startY, currentRadius, 0, Math.PI * 2, false);
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+            ctx.fill();
+
+            // Draw velocity vector (opposite direction of drag)
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(startX - (endX - startX), startY - (endY - startY));
+            ctx.strokeStyle = '#00ffaa';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function draw() {
+            clearCanvas();
+            drawCreationPreview();
+            bodies.forEach(drawBody);
+        }
+
+        // --- Animation Loop ---
+        let lastTime = 0;
+        let frameCount = 0;
+        let lastFPSUpdateTime = 0;
+
+        function gameLoop(timestamp) {
+            if (!simRunning) return;
+
+            // FPS Calculation
+            frameCount++;
+            if (timestamp - lastFPSUpdateTime >= 1000) {
+                document.getElementById('fpsDisplay').textContent = frameCount;
+                frameCount = 0;
+                lastFPSUpdateTime = timestamp;
+            }
+
+            // Update physics
+            rk4Step();
+            
+            // Redraw everything
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // --- INPUT HANDLERS ---
+
+        function handleMouseDown(e) {
+            isDragging = true;
+            dragStartPos = { x: e.clientX, y: e.clientY };
+        }
+
+        function handleMouseMove(e) {
+            if (!isDragging) return;
+            dragEndPos = { x: e.clientX, y: e.clientY };
+            // Request redraw to update velocity preview line
+            draw(); 
+        }
+
+        function handleMouseUp(e) {
+            if (!dragStartPos) return;
+
+            dragEndPos = { x: e.clientX, y: e.clientY };
+            const velocityScale = 0.005; // Adjust sensitivity
+            
+            // Calculate velocity (opposite of drag direction)
+            const velX = (dragStartPos.x - dragEndPos.x) * velocityScale;
+            const velY = (dragStartPos.y - dragEndPos.y) * velocityScale;
+
+            // Calculate position (relative to simulation center, adjusted for control panel offset)
+            const simPosX = dragStartPos.x - 280 - canvasCenter.x;
+            const simPosY = dragStartPos.y - canvasCenter.y;
+
+            const mass = parseFloat(massSlider.value);
+
+            bodies.push(new Body(
+                mass,
+                { x: simPosX, y: simPosY },
+                { x: velX, y: velY }
+            ));
+
+            document.getElementById('bodyCount').textContent = bodies.length;
+
+            isDragging = false;
+            dragStartPos = null;
+            dragEndPos = null;
+        }
+
+        // --- Event Listeners and Initialization ---
+
+        function init() {
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas(); // Initial sizing
+
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+
+            document.getElementById('clearButton').addEventListener('click', () => {
+                bodies = [];
+                document.getElementById('bodyCount').textContent = 0;
+                draw();
+            });
+
+            massSlider.addEventListener('input', (e) => {
+                currentMassDisplay.textContent = `Mass: ${e.target.value}`;
+            });
+
+            // Start with a large central body (Sun/Star)
+            bodies.push(new Body(
+                5000,
+                { x: 0, y: 0 },
+                { x: 0, y: 0 },
+                '#ffaa00' // Yellow/Orange Star
+            ));
+            document.getElementById('bodyCount').textContent = bodies.length;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        init();
     </script>
+
 </body>
 </html>
+
 
