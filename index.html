@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Interstellar RK4 - Ultimate Laboratory</title>
+    <title>Interstellar RK4 - Final Edition</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -10,29 +10,53 @@
     <style>
         :root {
             --neon: #00f2fe;
-            --glass: rgba(0, 5, 15, 0.85);
+            --glass: rgba(0, 5, 15, 0.9);
             --font: 'Segoe UI', system-ui, sans-serif;
+            --accent-red: #ff4444;
         }
 
-        body { margin: 0; overflow: hidden; font-family: var(--font); background: #000; color: white; cursor: crosshair; }
+        body { margin: 0; overflow: hidden; font-family: var(--font); background: #000; color: white; }
         
-        /* Sci-Fi HUD Panels */
         .hud-panel {
             position: absolute;
             background: var(--glass);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(0, 242, 254, 0.3);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 242, 254, 0.4);
             border-radius: 15px;
             padding: 20px;
             z-index: 100;
-            box-shadow: 0 0 20px rgba(0, 242, 254, 0.1);
+            box-shadow: 0 0 30px rgba(0, 242, 254, 0.2);
         }
 
         #main-controls { top: 20px; left: 20px; width: 280px; }
         #telemetry { top: 20px; right: 20px; width: 220px; font-family: monospace; }
-        #flight-help { bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; display: none; }
+        
+        /* THE TEAM OVERLAY */
+        #team-overlay {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            background: var(--glass);
+            backdrop-filter: blur(30px);
+            border: 2px solid var(--neon);
+            border-radius: 20px;
+            padding: 30px;
+            z-index: 1000;
+            display: none; /* Hidden by default */
+            box-shadow: 0 0 50px rgba(0, 242, 254, 0.5);
+        }
 
-        h2 { margin: 0 0 15px 0; color: var(--neon); font-size: 1.2em; text-transform: uppercase; letter-spacing: 3px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .team-member {
+            margin-bottom: 15px;
+            padding-left: 10px;
+            border-left: 3px solid var(--neon);
+        }
+
+        .team-role { font-size: 0.8em; color: var(--neon); text-transform: uppercase; letter-spacing: 1px; }
+        .team-name { font-weight: bold; font-size: 1.1em; display: block; margin-top: 2px; }
+
+        h2 { margin: 0 0 15px 0; color: var(--neon); font-size: 1.3em; text-transform: uppercase; letter-spacing: 2px; }
 
         .stat-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9em; }
         .stat-val { color: var(--neon); }
@@ -48,206 +72,188 @@
             background: linear-gradient(90deg, #00c6ff 0%, #0072ff 100%);
             border: none; color: white; font-weight: bold; cursor: pointer; margin-top: 10px;
         }
-        .btn-primary:hover { filter: brightness(1.3); transform: scale(1.02); }
+        
+        .btn-team {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--neon);
+            color: var(--neon);
+            margin-top: 10px;
+            cursor: pointer;
+        }
 
-        .pilot-keys { display: inline-block; background: #333; padding: 2px 6px; border-radius: 4px; color: var(--neon); margin: 0 2px; }
-
-        details { font-size: 0.8em; margin-top: 15px; border-top: 1px solid #222; padding-top: 10px; }
-        summary { cursor: pointer; color: var(--neon); }
+        #flight-help { bottom: 20px; left: 50%; transform: translateX(-50%); position: absolute; z-index: 100; text-align: center; display: none; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px;}
+        .pilot-keys { background: #333; padding: 2px 6px; border-radius: 4px; color: var(--neon); }
     </style>
 </head>
 <body>
 
 <div id="main-controls" class="hud-panel">
-    <h2>Mission Control</h2>
+    <h2>COSMOS RK4</h2>
     
-    <label>Navigation Mode</label>
+    <label>Navigation</label>
     <select id="navMode" onchange="toggleFlightMode()">
-        <option value="orbit">Orbit Controls (Mouse)</option>
-        <option value="pilot">Spaceship Pilot (WASD)</option>
+        <option value="orbit">Orbit (Observation)</option>
+        <option value="pilot">Pilot (Exploration)</option>
     </select>
 
-    <label>Target Focus</label>
-    <select id="cameraTarget" onchange="updateTarget()">
-        <option value="none">Deep Space</option>
-        <option value="Sun">Sun</option>
-        <option value="Mercury">Mercury</option>
-        <option value="Venus">Venus</option>
-        <option value="Earth">Earth</option>
-        <option value="Mars">Mars</option>
-        <option value="Jupiter">Jupiter</option>
-        <option value="Saturn">Saturn</option>
-        <option value="Uranus">Uranus</option>
-        <option value="Neptune">Neptune</option>
-    </select>
+    <label>Warp Speed</label>
+    <input type="range" id="dt" min="0" max="0.1" step="0.001" value="0.015">
 
-    <label>Time Warp</label>
-    <div style="display:flex; gap:5px;">
-        <button onclick="timeScale = 0">⏸</button>
-        <button onclick="timeScale = 1">▶</button>
-        <input type="range" id="dt" min="0" max="0.1" step="0.001" value="0.015" oninput="timeScale=1">
-    </div>
-
-    <button class="btn-primary" onclick="location.reload()">Reset Universe</button>
-
-    <details>
-        <summary>System Manifest</summary>
-        <p>Integrator: <b>RK4 (Runge-Kutta)</b></p>
-        <p>Entities: <b>3,510</b> (Planets + Asteroids)</p>
-        <p>Lead: <b>Wabi</b> & The Lab Team</p>
-    </details>
+    <button class="btn-primary" onclick="updateTarget('Earth')">Quick Jump to Earth</button>
+    
+    <button class="btn-team" onclick="toggleTeam(true)">👥 ABOUT THE TEAM</button>
 </div>
 
 <div id="telemetry" class="hud-panel">
-    <h2>Telemetry</h2>
-    <div class="stat-row"><span>Target:</span> <span id="tel-name" class="stat-val">None</span></div>
+    <h2>TELEMETRY</h2>
+    <div class="stat-row"><span>Target:</span> <span id="tel-name" class="stat-val">Free Roam</span></div>
     <div class="stat-row"><span>Velocity:</span> <span id="tel-speed" class="stat-val">0</span></div>
-    <div class="stat-row"><span>Distance:</span> <span id="tel-dist" class="stat-val">0</span></div>
-    <div class="stat-row"><span>FPS:</span> <span id="fps" class="stat-val">60</span></div>
+    <div class="stat-row"><span>Dist to Sun:</span> <span id="tel-dist" class="stat-val">0</span></div>
+    <div class="stat-row"><span>System FPS:</span> <span id="fps" class="stat-val">60</span></div>
+</div>
+
+<div id="team-overlay">
+    <h2 style="text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px;">TEAM PORTAL</h2>
+    
+    <div class="team-member">
+        <span class="team-role">Team Leader & Programmer</span>
+        <span class="team-name">Wabi</span>
+    </div>
+    <div class="team-member">
+        <span class="team-role">Programmer</span>
+        <span class="team-name">Rakeb Tewodros</span>
+    </div>
+    <div class="team-member">
+        <span class="team-role">Researcher</span>
+        <span class="team-name">Henok Yared</span>
+    </div>
+    <div class="team-member">
+        <span class="team-role">Research & Presentation</span>
+        <span class="team-name">Rediet</span>
+    </div>
+    <div class="team-member">
+        <span class="team-role">Researcher</span>
+        <span class="team-name">Aklesiya Negalign</span>
+    </div>
+    <div class="team-member">
+        <span class="team-role">Research Support</span>
+        <span class="team-name">Hemen Tadese</span>
+    </div>
+    <div class="team-member">
+        <span class="team-role">Assistant Project Coordinator</span>
+        <span class="team-name">Arsema</span>
+    </div>
+
+    <button class="btn-primary" onclick="toggleTeam(false)">CLOSE PORTAL</button>
 </div>
 
 <div id="flight-help">
-    FLY: <span class="pilot-keys">W</span> <span class="pilot-keys">A</span> <span class="pilot-keys">S</span> <span class="pilot-keys">D</span> | 
-    ALTITUDE: <span class="pilot-keys">SPACE</span> / <span class="pilot-keys">SHIFT</span> | 
-    ROLL: <span class="pilot-keys">Q</span> / <span class="pilot-keys">E</span>
+    MOVE: <span class="pilot-keys">W/A/S/D</span> | ALT: <span class="pilot-keys">SPACE/SHIFT</span> | ROLL: <span class="pilot-keys">Q/E</span>
 </div>
 
 <script>
-/* ============================
-   GLOBALS & CORE
-============================ */
 let scene, camera, renderer, controls, raycaster, mouse;
 let bodies = [], meshes = [], labels = [], trails = [];
 let targetBody = null, isPilot = false;
-let timeScale = 1, G = 6500;
-let keys = {};
-
-// Pilot velocities
-let moveVel = new THREE.Vector3();
-let lookRot = new THREE.Euler(0, 0, 0, 'YXZ');
+let G = 6500, keys = {}, moveVel = new THREE.Vector3();
 
 function init() {
     scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 1, 200000);
-    camera.position.set(0, 2000, 4000);
+    camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 1, 300000);
+    camera.position.set(0, 3000, 5000);
 
     renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0x000005);
     document.body.appendChild(renderer.domElement);
 
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
-    raycaster = new THREE.Raycaster();
-    mouse = new THREE.Vector2();
+    createStars();
+    createSolarSystem();
+    createAsteroidBelt();
 
-    createMilkyWay();
-    setupUniverse();
-    
     window.addEventListener('keydown', e => keys[e.code] = true);
     window.addEventListener('keyup', e => keys[e.code] = false);
     window.addEventListener('mousedown', onPlanetClick);
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth/window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    window.addEventListener('resize', onResize);
 }
 
-/* ============================
-   VISUAL ASSETS
-============================ */
-function createMilkyWay() {
-    // Star core
+function createStars() {
     const geo = new THREE.BufferGeometry();
     const pos = [];
-    for(let i=0; i<30000; i++) {
-        const r = Math.random() * 20000;
-        const theta = Math.random() * Math.PI * 2;
-        pos.push(Math.cos(theta)*r, (Math.random()-0.5)*5000, Math.sin(theta)*r);
-    }
+    for(let i=0; i<25000; i++) pos.push((Math.random()-0.5)*40000, (Math.random()-0.5)*40000, (Math.random()-0.5)*40000);
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({color: 0xffffff, size: 1.2, transparent: true, opacity: 0.6})));
+    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({color: 0xffffff, size: 1.5})));
 }
+
+const solarData = [
+    { name: "Sun", m: 4500, d: 0, s: 150, c: 0xffaa00, v: 0 },
+    { name: "Mercury", m: 5, d: 400, s: 12, c: 0x999999, v: 9.8 },
+    { name: "Venus", m: 10, d: 650, s: 22, c: 0xeebb99, v: 8.5 },
+    { name: "Earth", m: 10, d: 900, s: 25, c: 0x2288ff, v: 7.5 },
+    { name: "Mars", m: 8, d: 1200, s: 16, c: 0xff5533, v: 6.8 },
+    { name: "Jupiter", m: 220, d: 2000, s: 75, c: 0xffa500, v: 5.2 },
+    { name: "Saturn", m: 180, d: 2800, s: 65, c: 0xeeddaa, v: 4.5 },
+    { name: "Uranus", m: 80, d: 3800, s: 45, c: 0x88ffff, v: 3.8 },
+    { name: "Neptune", m: 80, d: 4800, s: 45, c: 0x3366ff, v: 3.4 }
+];
 
 function createLabel(name, color) {
     const canvas = document.createElement('canvas');
     canvas.width = 256; canvas.height = 64;
     const ctx = canvas.getContext('2d');
-    ctx.font = 'Bold 40px Segoe UI';
+    ctx.font = 'Bold 35px Arial';
     ctx.fillStyle = color;
-    ctx.shadowBlur = 10; ctx.shadowColor = color;
+    ctx.shadowBlur = 8; ctx.shadowColor = color;
     ctx.fillText(name.toUpperCase(), 10, 45);
-    
-    const tex = new THREE.CanvasTexture(canvas);
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
-    sprite.scale.set(120, 30, 1);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas) }));
+    sprite.scale.set(150, 40, 1);
     return sprite;
 }
 
-const solarData = [
-    { name: "Sun", m: 4000, d: 0, s: 120, c: 0xffcc00, v: 0 },
-    { name: "Mercury", m: 5, d: 350, s: 10, c: 0x999999, v: 9.5 },
-    { name: "Venus", m: 10, d: 550, s: 18, c: 0xffddaa, v: 8.2 },
-    { name: "Earth", m: 10, d: 800, s: 20, c: 0x2288ff, v: 7.1 },
-    { name: "Mars", m: 8, d: 1100, s: 14, c: 0xff5533, v: 6.2 },
-    { name: "Jupiter", m: 200, d: 1800, s: 65, c: 0xffa500, v: 4.8 },
-    { name: "Saturn", m: 150, d: 2500, s: 55, c: 0xeeddaa, v: 4.2 },
-    { name: "Uranus", m: 70, d: 3300, s: 40, c: 0x88ffff, v: 3.5 },
-    { name: "Neptune", m: 70, d: 4000, s: 40, c: 0x3366ff, v: 3.2 }
-];
-
-function setupUniverse() {
+function createSolarSystem() {
     solarData.forEach(p => {
         const mesh = new THREE.Mesh(
             new THREE.SphereGeometry(p.s, 48, 48),
-            new THREE.MeshPhongMaterial({ 
-                color: p.c, 
-                emissive: p.name === "Sun" ? p.c : 0x000000,
-                emissiveIntensity: 0.8 
-            })
+            new THREE.MeshPhongMaterial({ color: p.c, emissive: p.name === "Sun" ? p.c : 0x000000, emissiveIntensity: 1 })
         );
         mesh.position.set(p.d, 0, 0);
         scene.add(mesh);
 
-        // Atmosphere
-        if(p.name !== "Sun") {
-            const glow = new THREE.Mesh(new THREE.SphereGeometry(p.s*1.2, 32, 32), new THREE.MeshBasicMaterial({color: p.c, transparent:true, opacity:0.1, side: THREE.BackSide}));
+        if(p.name === "Sun") {
+            const light = new THREE.PointLight(0xffffff, 3, 30000);
+            mesh.add(light);
+        } else {
+            const glow = new THREE.Mesh(new THREE.SphereGeometry(p.s*1.15, 32, 32), new THREE.MeshBasicMaterial({color: p.c, transparent:true, opacity:0.1, side: THREE.BackSide}));
             mesh.add(glow);
         }
 
-        // Label
-        const label = createLabel(p.name, "#" + p.c.toString(16).padStart(6, '0'));
-        scene.add(label);
+        const lbl = createLabel(p.name, "#" + p.c.toString(16).padStart(6, '0'));
+        scene.add(lbl);
 
-        bodies.push({ name: p.name, m: p.m, mesh, label, pos: new THREE.Vector3(p.d, 0, 0), vel: new THREE.Vector3(0, 0, p.v) });
+        bodies.push({ name: p.name, m: p.m, mesh, label: lbl, pos: new THREE.Vector3(p.d, 0, 0), vel: new THREE.Vector3(0, 0, p.v) });
         meshes.push(mesh);
 
-        const trail = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color: p.c, transparent:true, opacity:0.2}));
+        const trail = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color: p.c, transparent:true, opacity:0.1}));
         trail.userData = { pts: [] };
         trails.push(trail);
         scene.add(trail);
     });
-
-    // Asteroid Belt
-    const astGeo = new THREE.BufferGeometry();
-    const astPos = [];
-    for(let i=0; i<3500; i++) {
-        const r = 1300 + Math.random() * 300;
-        const a = Math.random() * Math.PI * 2;
-        astPos.push(Math.cos(a)*r, (Math.random()-0.5)*40, Math.sin(a)*r);
-    }
-    astGeo.setAttribute('position', new THREE.Float32BufferAttribute(astPos, 3));
-    scene.add(new THREE.Points(astGeo, new THREE.PointsMaterial({color: 0x777777, size: 1.5})));
-
-    scene.add(new THREE.PointLight(0xffffff, 2.5, 20000));
-    scene.add(new THREE.AmbientLight(0x222233));
 }
 
-/* ============================
-   PHYSICS ENGINE (RK4)
-============================ */
+function createAsteroidBelt() {
+    const geo = new THREE.BufferGeometry();
+    const pos = [];
+    for(let i=0; i<4000; i++) {
+        const r = 1450 + Math.random() * 350;
+        const a = Math.random() * Math.PI * 2;
+        pos.push(Math.cos(a)*r, (Math.random()-0.5)*50, Math.sin(a)*r);
+    }
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({color: 0x666666, size: 2})));
+}
+
 function stepRK4(dt) {
     if(dt === 0) return;
     const calcA = (ps) => ps.map((p, i) => {
@@ -255,8 +261,7 @@ function stepRK4(dt) {
         ps.forEach((p2, j) => {
             if(i !== j) {
                 let diff = new THREE.Vector3().subVectors(p2, p);
-                let distSq = diff.lengthSq() + 20;
-                a.add(diff.normalize().multiplyScalar((G * bodies[j].m)/distSq));
+                a.add(diff.normalize().multiplyScalar((G * bodies[j].m)/(diff.lengthSq() + 10)));
             }
         });
         return a;
@@ -265,8 +270,7 @@ function stepRK4(dt) {
     let p0 = bodies.map(b => b.pos.clone());
     let v0 = bodies.map(b => b.vel.clone());
 
-    let a1 = calcA(p0);
-    let kv1 = a1.map(a => a.multiplyScalar(dt));
+    let kv1 = calcA(p0).map(a => a.multiplyScalar(dt));
     let kp1 = v0.map(v => v.clone().multiplyScalar(dt));
 
     let p1 = p0.map((p, i) => p.clone().add(kp1[i].clone().multiplyScalar(0.5)));
@@ -287,9 +291,10 @@ function stepRK4(dt) {
     });
 }
 
-/* ============================
-   PILOT & NAVIGATION
-============================ */
+function toggleTeam(show) {
+    document.getElementById('team-overlay').style.display = show ? 'block' : 'none';
+}
+
 function toggleFlightMode() {
     isPilot = (document.getElementById('navMode').value === 'pilot');
     controls.enabled = !isPilot;
@@ -297,65 +302,36 @@ function toggleFlightMode() {
     if(isPilot) targetBody = null;
 }
 
-function updatePilot() {
-    if(!isPilot) return;
-    
-    const speed = keys['ShiftLeft'] ? 15 : 5;
-    const rotSpeed = 0.02;
-
-    if(keys['KeyW']) moveVel.z = -speed;
-    else if(keys['KeyS']) moveVel.z = speed;
-    else moveVel.z *= 0.9;
-
-    if(keys['KeyA']) moveVel.x = -speed;
-    else if(keys['KeyD']) moveVel.x = speed;
-    else moveVel.x *= 0.9;
-
-    if(keys['Space']) moveVel.y = speed;
-    else if(keys['ControlLeft']) moveVel.y = -speed;
-    else moveVel.y *= 0.9;
-
-    if(keys['KeyQ']) camera.rotation.z += rotSpeed;
-    if(keys['KeyE']) camera.rotation.z -= rotSpeed;
-
-    camera.translateX(moveVel.x);
-    camera.translateY(moveVel.y);
-    camera.translateZ(moveVel.z);
-}
-
-function updateTarget() {
-    const val = document.getElementById('cameraTarget').value;
-    targetBody = (val === "none") ? null : bodies.find(b => b.name === val);
-}
-
 function onPlanetClick(e) {
+    if(e.target !== renderer.domElement) return;
     mouse.x = (e.clientX/window.innerWidth)*2-1;
     mouse.y = -(e.clientY/window.innerHeight)*2+1;
     raycaster.setFromCamera(mouse, camera);
     const hits = raycaster.intersectObjects(meshes);
     if(hits.length > 0) {
-        const b = bodies.find(body => body.mesh === hits[0].object);
-        targetBody = b;
-        document.getElementById('cameraTarget').value = b.name;
+        targetBody = bodies.find(body => body.mesh === hits[0].object);
     }
 }
 
-/* ============================
-   MAIN LOOP
-============================ */
+function updateTarget(name) {
+    targetBody = bodies.find(b => b.name === name);
+}
+
+function onResize() {
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
 let lastT = 0, fCount = 0;
 function animate(t) {
     requestAnimationFrame(animate);
-    
-    const dt = parseFloat(document.getElementById('dt').value) * timeScale;
+    const dt = parseFloat(document.getElementById('dt').value);
     stepRK4(dt);
 
     bodies.forEach((b, i) => {
         b.mesh.position.copy(b.pos);
-        // Position Label above planet
-        b.label.position.copy(b.pos).add(new THREE.Vector3(0, b.mesh.geometry.parameters.radius + 30, 0));
-        
-        // Update Trails
+        b.label.position.copy(b.pos).add(new THREE.Vector3(0, b.mesh.geometry.parameters.radius + 40, 0));
         if(dt > 0) {
             let pts = trails[i].userData.pts;
             pts.push(b.pos.clone());
@@ -364,17 +340,25 @@ function animate(t) {
         }
     });
 
-    if(isPilot) updatePilot();
-    else if(targetBody) {
+    if(isPilot) {
+        const speed = keys['ShiftLeft'] ? 18 : 6;
+        if(keys['KeyW']) camera.translateZ(-speed);
+        if(keys['KeyS']) camera.translateZ(speed);
+        if(keys['KeyA']) camera.translateX(-speed);
+        if(keys['KeyD']) camera.translateX(speed);
+        if(keys['Space']) camera.translateY(speed);
+        if(keys['ControlLeft']) camera.translateY(-speed);
+        if(keys['KeyQ']) camera.rotation.z += 0.02;
+        if(keys['KeyE']) camera.rotation.z -= 0.02;
+    } else if(targetBody) {
         controls.target.lerp(targetBody.pos, 0.1);
         document.getElementById('tel-name').innerText = targetBody.name;
-        document.getElementById('tel-speed').innerText = (targetBody.vel.length() * 100).toFixed(0) + " km/h";
+        document.getElementById('tel-speed').innerText = (targetBody.vel.length() * 120).toFixed(0) + " km/h";
         document.getElementById('tel-dist').innerText = (targetBody.pos.distanceTo(bodies[0].pos) / 100).toFixed(2) + " AU";
     }
 
     controls.update();
     renderer.render(scene, camera);
-
     fCount++;
     if(t - lastT > 1000) { document.getElementById('fps').innerText = fCount; fCount=0; lastT=t; }
 }
