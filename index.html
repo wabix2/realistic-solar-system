@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Interstellar RK4 - Ultimate Laboratory</title>
+    <title>Interstellar RK4 - Multi-Lab Edition</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -12,6 +12,7 @@
             --neon: #00f2fe;
             --glass: rgba(0, 5, 15, 0.85);
             --font: 'Segoe UI', system-ui, sans-serif;
+            --exp-accent: #ff00ff;
         }
 
         body { margin: 0; overflow: hidden; font-family: var(--font); background: #000; color: white; cursor: crosshair; }
@@ -27,11 +28,21 @@
             box-shadow: 0 0 20px rgba(0, 242, 254, 0.1);
         }
 
-        #main-controls { top: 20px; left: 20px; width: 280px; }
-        #telemetry { top: 20px; right: 20px; width: 220px; font-family: monospace; }
+        /* Original Left Panel */
+        #main-controls { top: 20px; left: 20px; width: 260px; }
+
+        /* NEW Right Experimental Panel */
+        #exp-controls { 
+            top: 20px; right: 20px; width: 240px; 
+            border: 1px solid rgba(255, 0, 255, 0.3);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.1);
+        }
+
+        #telemetry { bottom: 20px; right: 20px; width: 220px; font-family: monospace; }
         #flight-help { bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; display: none; }
 
-        h2 { margin: 0 0 15px 0; color: var(--neon); font-size: 1.2em; text-transform: uppercase; letter-spacing: 3px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        h2 { margin: 0 0 15px 0; color: var(--neon); font-size: 1.1em; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .exp-title { color: var(--exp-accent); }
 
         .stat-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9em; }
         .stat-val { color: var(--neon); }
@@ -47,18 +58,16 @@
             background: linear-gradient(90deg, #00c6ff 0%, #0072ff 100%);
             border: none; color: white; font-weight: bold; cursor: pointer; margin-top: 10px;
         }
-        .btn-primary:hover { filter: brightness(1.3); transform: scale(1.02); }
-
+        
         .btn-tech {
             background: rgba(0, 242, 254, 0.1);
             border: 1px solid var(--neon);
             color: var(--neon);
             margin-top: 10px;
             cursor: pointer;
-            transition: 0.3s;
         }
-        .btn-tech:hover { background: var(--neon); color: #000; }
 
+        /* TECH STYLE PERSONNEL PORTAL */
         #team-portal {
             position: fixed;
             top: 50%; left: 50%;
@@ -71,7 +80,6 @@
             padding: 30px;
             display: none;
             z-index: 1000;
-            box-shadow: 0 0 50px rgba(0, 242, 254, 0.4);
         }
 
         .team-entry {
@@ -82,12 +90,9 @@
             border-radius: 0 10px 10px 0;
         }
         .team-role { font-size: 0.65em; color: var(--neon); text-transform: uppercase; letter-spacing: 1px; display: block; }
-        .team-name { font-weight: bold; font-size: 1.1em; letter-spacing: 0.5px; }
+        .team-name { font-weight: bold; font-size: 1.1em; }
 
         .pilot-keys { display: inline-block; background: #333; padding: 2px 6px; border-radius: 4px; color: var(--neon); margin: 0 2px; }
-
-        details { font-size: 0.8em; margin-top: 15px; border-top: 1px solid #222; padding-top: 10px; }
-        summary { cursor: pointer; color: var(--neon); }
     </style>
 </head>
 <body>
@@ -97,8 +102,8 @@
     
     <label>Navigation Mode</label>
     <select id="navMode" onchange="toggleFlightMode()">
-        <option value="orbit">Orbit Controls (Mouse)</option>
-        <option value="pilot">Spaceship Pilot (WASD)</option>
+        <option value="orbit">Orbit Controls</option>
+        <option value="pilot">Spaceship Pilot</option>
     </select>
 
     <label>Target Focus</label>
@@ -119,22 +124,33 @@
     <div style="display:flex; gap:5px;">
         <button onclick="timeScale = 0">⏸</button>
         <button onclick="timeScale = 1">▶</button>
-        <input type="range" id="dt" min="0" max="0.1" step="0.001" value="0.015" oninput="timeScale=1">
+        <input type="range" id="dt" min="0" max="0.1" step="0.001" value="0.015">
     </div>
 
     <button class="btn-tech" onclick="togglePortal(true)">👥 ABOUT THE TEAM</button>
     <button class="btn-primary" onclick="location.reload()">Reset Universe</button>
+</div>
 
-    <details>
-        <summary>System Manifest</summary>
-        <p>Integrator: <b>RK4 (Runge-Kutta)</b></p>
-        <p>Entities: <b>3,510</b> (Planets + Asteroids)</p>
-    </details>
+<div id="exp-controls" class="hud-panel">
+    <h2 class="exp-title">Experimental Lab</h2>
+    
+    <label>Gravitational Constant (G)</label>
+    <input type="range" id="gConst" min="1000" max="15000" step="100" value="6500" oninput="G = this.value">
+    
+    <label>Sun Mass Factor</label>
+    <input type="range" id="sunMass" min="1000" max="10000" step="100" value="4000" oninput="updateSunMass(this.value)">
+
+    <label>Particle Glow</label>
+    <button class="btn-tech" style="border-color:var(--exp-accent); color:var(--exp-accent);" onclick="toggleTrails()">Toggle Orbit Trails</button>
+    
+    <label>Lab Notes</label>
+    <div style="font-size: 0.7em; color: #aaa; line-height: 1.4;">
+        Adjusting <b>G</b> mid-sim will cause orbital destabilization. Use for stress testing the RK4 integrator.
+    </div>
 </div>
 
 <div id="team-portal">
     <h2 style="text-align: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">Personnel Portal</h2>
-    
     <div class="team-entry"><span class="team-role">Lead Developer</span><span class="team-name">Wabi Tafese</span></div>
     <div class="team-entry"><span class="team-role">Lead Programmer</span><span class="team-name">Rakeb Tewodros</span></div>
     <div class="team-entry"><span class="team-role">Head Researcher</span><span class="team-name">Henok Yared</span></div>
@@ -142,7 +158,6 @@
     <div class="team-entry"><span class="team-role">Data Analyst</span><span class="team-name">Aklesiya Negalign</span></div>
     <div class="team-entry"><span class="team-role">Research Support</span><span class="team-name">Hemen Tadese</span></div>
     <div class="team-entry"><span class="team-role">Project Coordinator</span><span class="team-name">Arsema Laikemariam</span></div>
-
     <button class="btn-primary" style="margin-top: 15px;" onclick="togglePortal(false)">CLOSE PORTAL</button>
 </div>
 
@@ -154,52 +169,35 @@
     <div class="stat-row"><span>FPS:</span> <span id="fps" class="stat-val">60</span></div>
 </div>
 
-<div id="flight-help">
-    FLY: <span class="pilot-keys">W</span> <span class="pilot-keys">A</span> <span class="pilot-keys">S</span> <span class="pilot-keys">D</span> | 
-    ALTITUDE: <span class="pilot-keys">SPACE</span> / <span class="pilot-keys">SHIFT</span> | 
-    ROLL: <span class="pilot-keys">Q</span> / <span class="pilot-keys">E</span>
-</div>
-
 <script>
 let scene, camera, renderer, controls, raycaster, mouse;
-let bodies = [], meshes = [], labels = [], trails = [];
+let bodies = [], meshes = [], trails = [];
 let targetBody = null, isPilot = false;
-let timeScale = 1, G = 6500;
+let timeScale = 1, G = 6500, trailsVisible = true;
 let keys = {};
-let moveVel = new THREE.Vector3();
 
 function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 1, 200000);
     camera.position.set(0, 2000, 4000);
-
     renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0x000005);
     document.body.appendChild(renderer.domElement);
-
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-
     raycaster = new THREE.Raycaster();
     mouse = new THREE.Vector2();
-
     createMilkyWay();
     setupUniverse();
-    
     window.addEventListener('keydown', e => keys[e.code] = true);
     window.addEventListener('keyup', e => keys[e.code] = false);
     window.addEventListener('mousedown', onPlanetClick);
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth/window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
 }
 
-function togglePortal(show) {
-    document.getElementById('team-portal').style.display = show ? 'block' : 'none';
-}
+function togglePortal(show) { document.getElementById('team-portal').style.display = show ? 'block' : 'none'; }
+function toggleTrails() { trailsVisible = !trailsVisible; trails.forEach(t => t.visible = trailsVisible); }
+function updateSunMass(val) { if(bodies[0]) bodies[0].m = parseFloat(val); }
 
 function createMilkyWay() {
     const geo = new THREE.BufferGeometry();
@@ -211,20 +209,6 @@ function createMilkyWay() {
     }
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     scene.add(new THREE.Points(geo, new THREE.PointsMaterial({color: 0xffffff, size: 1.2, transparent: true, opacity: 0.6})));
-}
-
-function createLabel(name, color) {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256; canvas.height = 64;
-    const ctx = canvas.getContext('2d');
-    ctx.font = 'Bold 40px Segoe UI';
-    ctx.fillStyle = color;
-    ctx.shadowBlur = 10; ctx.shadowColor = color;
-    ctx.fillText(name.toUpperCase(), 10, 45);
-    const tex = new THREE.CanvasTexture(canvas);
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
-    sprite.scale.set(120, 30, 1);
-    return sprite;
 }
 
 const solarData = [
@@ -241,36 +225,17 @@ const solarData = [
 
 function setupUniverse() {
     solarData.forEach(p => {
-        const mesh = new THREE.Mesh(
-            new THREE.SphereGeometry(p.s, 48, 48),
-            new THREE.MeshPhongMaterial({ color: p.c, emissive: p.name === "Sun" ? p.c : 0x000000, emissiveIntensity: 0.8 })
-        );
+        const mesh = new THREE.Mesh(new THREE.SphereGeometry(p.s, 48, 48), new THREE.MeshPhongMaterial({ color: p.c, emissive: p.name === "Sun" ? p.c : 0, emissiveIntensity: 0.8 }));
         mesh.position.set(p.d, 0, 0);
         scene.add(mesh);
-        if(p.name !== "Sun") {
-            const glow = new THREE.Mesh(new THREE.SphereGeometry(p.s*1.2, 32, 32), new THREE.MeshBasicMaterial({color: p.c, transparent:true, opacity:0.1, side: THREE.BackSide}));
-            mesh.add(glow);
-        }
-        const label = createLabel(p.name, "#" + p.c.toString(16).padStart(6, '0'));
-        scene.add(label);
-        bodies.push({ name: p.name, m: p.m, mesh, label, pos: new THREE.Vector3(p.d, 0, 0), vel: new THREE.Vector3(0, 0, p.v) });
+        bodies.push({ name: p.name, m: p.m, mesh, pos: new THREE.Vector3(p.d, 0, 0), vel: new THREE.Vector3(0, 0, p.v) });
         meshes.push(mesh);
         const trail = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color: p.c, transparent:true, opacity:0.2}));
         trail.userData = { pts: [] };
         trails.push(trail);
         scene.add(trail);
     });
-    const astGeo = new THREE.BufferGeometry();
-    const astPos = [];
-    for(let i=0; i<3500; i++) {
-        const r = 1300 + Math.random() * 300;
-        const a = Math.random() * Math.PI * 2;
-        astPos.push(Math.cos(a)*r, (Math.random()-0.5)*40, Math.sin(a)*r);
-    }
-    astGeo.setAttribute('position', new THREE.Float32BufferAttribute(astPos, 3));
-    scene.add(new THREE.Points(astGeo, new THREE.PointsMaterial({color: 0x777777, size: 1.5})));
     scene.add(new THREE.PointLight(0xffffff, 2.5, 20000));
-    scene.add(new THREE.AmbientLight(0x222233));
 }
 
 function stepRK4(dt) {
@@ -280,66 +245,31 @@ function stepRK4(dt) {
         ps.forEach((p2, j) => {
             if(i !== j) {
                 let diff = new THREE.Vector3().subVectors(p2, p);
-                let distSq = diff.lengthSq() + 20;
-                a.add(diff.normalize().multiplyScalar((G * bodies[j].m)/distSq));
+                a.add(diff.normalize().multiplyScalar((G * bodies[j].m)/(diff.lengthSq() + 20)));
             }
         });
         return a;
     });
-    let p0 = bodies.map(b => b.pos.clone());
-    let v0 = bodies.map(b => b.vel.clone());
-    let kv1 = calcA(p0).map(a => a.multiplyScalar(dt));
-    let kp1 = v0.map(v => v.clone().multiplyScalar(dt));
+    let p0 = bodies.map(b => b.pos.clone()), v0 = bodies.map(b => b.vel.clone());
+    let kv1 = calcA(p0).map(a => a.multiplyScalar(dt)), kp1 = v0.map(v => v.clone().multiplyScalar(dt));
     let p1 = p0.map((p, i) => p.clone().add(kp1[i].clone().multiplyScalar(0.5)));
-    let kv2 = calcA(p1).map(a => a.multiplyScalar(dt));
-    let kp2 = v0.map((v, i) => v.clone().add(kv1[i].clone().multiplyScalar(0.5)).multiplyScalar(dt));
+    let kv2 = calcA(p1).map(a => a.multiplyScalar(dt)), kp2 = v0.map((v, i) => v.clone().add(kv1[i].clone().multiplyScalar(0.5)).multiplyScalar(dt));
     let p2 = p0.map((p, i) => p.clone().add(kp2[i].clone().multiplyScalar(0.5)));
-    let kv3 = calcA(p2).map(a => a.multiplyScalar(dt));
-    let kp3 = v0.map((v, i) => v.clone().add(kv2[i].clone().multiplyScalar(0.5)).multiplyScalar(dt));
-    let p3 = p0.map((p, i) => p.clone().add(kp3[i]));
-    let kv4 = calcA(p3).map(a => a.multiplyScalar(dt));
-    let kp4 = v0.map((v, i) => v.clone().add(kv3[i]).multiplyScalar(dt));
+    let kv3 = calcA(p2).map(a => a.multiplyScalar(dt)), kp3 = v0.map((v, i) => v.clone().add(kv2[i].clone().multiplyScalar(0.5)).multiplyScalar(dt));
+    let p3 = p0.map((p, i) => p.clone().add(kp3[i])), kv4 = calcA(p3).map(a => a.multiplyScalar(dt)), kp4 = v0.map((v, i) => v.clone().add(kv3[i]).multiplyScalar(dt));
     bodies.forEach((b, i) => {
         b.vel.add(kv1[i].add(kv2[i].multiplyScalar(2)).add(kv3[i].multiplyScalar(2)).add(kv4[i]).multiplyScalar(1/6));
         b.pos.add(kp1[i].add(kp2[i].multiplyScalar(2)).add(kp3[i].multiplyScalar(2)).add(kp4[i]).multiplyScalar(1/6));
     });
 }
 
-function toggleFlightMode() {
-    isPilot = (document.getElementById('navMode').value === 'pilot');
-    controls.enabled = !isPilot;
-    document.getElementById('flight-help').style.display = isPilot ? 'block' : 'none';
-    if(isPilot) targetBody = null;
-}
-
-function updatePilot() {
-    if(!isPilot) return;
-    const speed = keys['ShiftLeft'] ? 15 : 5;
-    if(keys['KeyW']) camera.translateZ(-speed);
-    if(keys['KeyS']) camera.translateZ(speed);
-    if(keys['KeyA']) camera.translateX(-speed);
-    if(keys['KeyD']) camera.translateX(speed);
-    if(keys['Space']) camera.translateY(speed);
-    if(keys['ControlLeft']) camera.translateY(-speed);
-    if(keys['KeyQ']) camera.rotation.z += 0.02;
-    if(keys['KeyE']) camera.rotation.z -= 0.02;
-}
-
-function updateTarget() {
-    const val = document.getElementById('cameraTarget').value;
-    targetBody = (val === "none") ? null : bodies.find(b => b.name === val);
-}
-
-function onPlanetClick(e) {
-    mouse.x = (e.clientX/window.innerWidth)*2-1;
-    mouse.y = -(e.clientY/window.innerHeight)*2+1;
-    raycaster.setFromCamera(mouse, camera);
-    const hits = raycaster.intersectObjects(meshes);
-    if(hits.length > 0) {
-        const b = bodies.find(body => body.mesh === hits[0].object);
-        targetBody = b;
-        document.getElementById('cameraTarget').value = b.name;
-    }
+function toggleFlightMode() { isPilot = (document.getElementById('navMode').value === 'pilot'); controls.enabled = !isPilot; if(isPilot) targetBody = null; }
+function updateTarget() { const val = document.getElementById('cameraTarget').value; targetBody = (val === "none") ? null : bodies.find(b => b.name === val); }
+function onPlanetClick(e) { 
+    mouse.x = (e.clientX/window.innerWidth)*2-1; mouse.y = -(e.clientY/window.innerHeight)*2+1; 
+    raycaster.setFromCamera(mouse, camera); 
+    const hits = raycaster.intersectObjects(meshes); 
+    if(hits.length > 0) { targetBody = bodies.find(b => b.mesh === hits[0].object); document.getElementById('cameraTarget').value = targetBody.name; }
 }
 
 let lastT = 0, fCount = 0;
@@ -349,25 +279,15 @@ function animate(t) {
     stepRK4(dt);
     bodies.forEach((b, i) => {
         b.mesh.position.copy(b.pos);
-        b.label.position.copy(b.pos).add(new THREE.Vector3(0, b.mesh.geometry.parameters.radius + 30, 0));
-        if(dt > 0) {
-            let pts = trails[i].userData.pts;
-            pts.push(b.pos.clone());
-            if(pts.length > 300) pts.shift();
+        if(dt > 0 && trailsVisible) {
+            let pts = trails[i].userData.pts; pts.push(b.pos.clone()); if(pts.length > 300) pts.shift();
             trails[i].geometry.setFromPoints(pts);
         }
     });
-    if(isPilot) updatePilot();
-    else if(targetBody) {
-        controls.target.lerp(targetBody.pos, 0.1);
-        document.getElementById('tel-name').innerText = targetBody.name;
-        document.getElementById('tel-speed').innerText = (targetBody.vel.length() * 100).toFixed(0) + " km/h";
-        document.getElementById('tel-dist').innerText = (targetBody.pos.distanceTo(bodies[0].pos) / 100).toFixed(2) + " AU";
-    }
+    if(targetBody) controls.target.lerp(targetBody.pos, 0.1);
     controls.update();
     renderer.render(scene, camera);
-    fCount++;
-    if(t - lastT > 1000) { document.getElementById('fps').innerText = fCount; fCount=0; lastT=t; }
+    fCount++; if(t - lastT > 1000) { document.getElementById('fps').innerText = fCount; fCount=0; lastT=t; }
 }
 
 init();
