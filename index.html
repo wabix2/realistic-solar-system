@@ -2,31 +2,31 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Planetary RK4 3D Laboratory</title>
+<title>Planetary RK4 Advanced Laboratory</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js"></script>
 
 <style>
-body {
+body{
 margin:0;
 overflow:hidden;
 font-family:Arial;
-background: radial-gradient(circle at center, #0b1a40, #000010);
+background:black;
 }
 
 #panel{
 position:absolute;
 top:10px;
 left:10px;
-width:340px;
-background:rgba(10,10,35,0.92);
+width:350px;
+background:rgba(10,15,40,0.9);
 color:white;
 padding:15px;
-border-radius:12px;
-font-size:14px;
+border-radius:10px;
 max-height:95vh;
 overflow:auto;
-box-shadow:0 0 15px rgba(0,255,255,0.2);
 }
 
 button,input,select{
@@ -36,19 +36,10 @@ padding:6px;
 border-radius:6px;
 border:none;
 }
-
-h3 { margin-top:15px; }
-
-.collapsible{
-cursor:pointer;
-background:#111a40;
-padding:8px;
-margin-top:10px;
-border-radius:6px;
-}
-
-.content{
-display:none;
+canvas.energyGraph{
+width:100%;
+height:120px;
+background:#000;
 margin-top:8px;
 }
 </style>
@@ -57,57 +48,32 @@ margin-top:8px;
 <body>
 
 <div id="panel">
-<h2>Planetary RK4 3D Lab</h2>
+<h2>Advanced RK4 Planetary Lab</h2>
 
-Integrator:
-<select id="method">
-<option value="rk4">RK4</option>
-<option value="euler">Euler</option>
-</select>
+<button onclick="loadSolarSystem()">Load Real Solar System</button>
+<button onclick="toggleAdaptive()">Toggle Adaptive dt</button>
 
-Initial dt:
-<input type="number" id="dt" value="0.01" step="0.001">
-
-<button onclick="loadSystem()">Load 20 Bodies</button>
-<button onclick="resetSystem()">Reset Simulation</button>
-<button onclick="exportCSV()">Export CSV</button>
-<button onclick="generateReport()">Generate Lab Report</button>
-
-<hr>
+dt:
+<input type="number" id="dt" value="0.001" step="0.0001">
 
 Bodies: <span id="count">0</span><br>
-FPS: <span id="fps">0</span><br>
-Energy: <span id="energy">0</span>
+Energy: <span id="energy">0</span><br>
+Mode: <span id="mode">Fixed</span>
 
-<hr>
-
-<h3>Orbit Analytics</h3>
-Center of Mass: <span id="com">0</span><br>
-Total Momentum: <span id="momentum">0</span><br>
-Stability: <span id="stability">Stable</span>
-
-<hr>
-
-<div class="collapsible" onclick="toggleAbout()">About Team ▼</div>
-<div class="content" id="aboutSection">
-<p><b>Wabi</b> – Team Leader & Programmer</p>
-<p><b>Rakeb Tewodros</b> – Programmer</p>
-<p><b>Henok Yared</b> – Researcher</p>
-<p><b>Rediet</b> – Research & Presentation</p>
-<p><b>Aklesiya Negalign</b> – Researcher</p>
-<p><b>Hemen Tadese</b> – Research Support</p>
-<p><b>Arsema</b> – Assistant Project Coordinator</p>
-</div>
-
+<h3>Energy Graph</h3>
+<canvas id="graph" class="energyGraph"></canvas>
 </div>
 
 <script>
 let scene=new THREE.Scene();
-let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,5000);
+let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,10000);
 let renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth,window.innerHeight);
 document.body.appendChild(renderer.domElement);
-camera.position.z=800;
+
+camera.position.set(0,200,800);
+
+let controls=new THREE.OrbitControls(camera,renderer.domElement);
 
 window.addEventListener("resize",()=>{
 camera.aspect=window.innerWidth/window.innerHeight;
@@ -115,20 +81,43 @@ camera.updateProjectionMatrix();
 renderer.setSize(window.innerWidth,window.innerHeight);
 });
 
-let bodies=[],meshes=[],history=[];
-let G=500;
+/* =========================
+   STARFIELD
+========================= */
+
+let starsGeometry=new THREE.BufferGeometry();
+let starVertices=[];
+for(let i=0;i<5000;i++){
+starVertices.push(
+THREE.MathUtils.randFloatSpread(5000),
+THREE.MathUtils.randFloatSpread(5000),
+THREE.MathUtils.randFloatSpread(5000)
+);
+}
+starsGeometry.setAttribute('position',
+new THREE.Float32BufferAttribute(starVertices,3));
+let starsMaterial=new THREE.PointsMaterial({color:0xffffff});
+let starField=new THREE.Points(starsGeometry,starsMaterial);
+scene.add(starField);
+
+/* =========================
+   PHYSICS
+========================= */
+
+let bodies=[],meshes=[],trails=[];
+let G=0.0003; // scaled
+let adaptive=false;
 
 class Body{
-constructor(m,x,y,z,vx,vy,vz){
+constructor(m,pos,vel){
 this.m=m;
-this.pos=new THREE.Vector3(x,y,z);
-this.vel=new THREE.Vector3(vx,vy,vz);
+this.pos=pos.clone();
+this.vel=vel.clone();
 this.acc=new THREE.Vector3();
 }
 }
 
-function computeAccelerations(){
-for(let i=0;i<bodies.length;i++){
+function computeAcceleration(i){
 let acc=new THREE.Vector3();
 for(let j=0;j<bodies.length;j++){
 if(i===j) continue;
@@ -137,41 +126,52 @@ let dist=diff.length()+0.1;
 let force=G*bodies[j].m/(dist*dist);
 acc.add(diff.normalize().multiplyScalar(force));
 }
-bodies[i].acc=acc;
-}
+return acc;
 }
 
 function rk4Step(dt){
+
 let original=bodies.map(b=>({pos:b.pos.clone(),vel:b.vel.clone()}));
 
-computeAccelerations();
-let k1=bodies.map(b=>({v:b.vel.clone(),a:b.acc.clone()}));
+let k1=[],k2=[],k3=[],k4=[];
+
+for(let i=0;i<bodies.length;i++){
+bodies[i].acc=computeAcceleration(i);
+k1.push({v:bodies[i].vel.clone(),a:bodies[i].acc.clone()});
+}
 
 for(let i=0;i<bodies.length;i++){
 bodies[i].pos=original[i].pos.clone().add(k1[i].v.clone().multiplyScalar(dt/2));
 bodies[i].vel=original[i].vel.clone().add(k1[i].a.clone().multiplyScalar(dt/2));
 }
 
-computeAccelerations();
-let k2=bodies.map(b=>({v:b.vel.clone(),a:b.acc.clone()}));
+for(let i=0;i<bodies.length;i++){
+bodies[i].acc=computeAcceleration(i);
+k2.push({v:bodies[i].vel.clone(),a:bodies[i].acc.clone()});
+}
 
 for(let i=0;i<bodies.length;i++){
 bodies[i].pos=original[i].pos.clone().add(k2[i].v.clone().multiplyScalar(dt/2));
 bodies[i].vel=original[i].vel.clone().add(k2[i].a.clone().multiplyScalar(dt/2));
 }
 
-computeAccelerations();
-let k3=bodies.map(b=>({v:b.vel.clone(),a:b.acc.clone()}));
+for(let i=0;i<bodies.length;i++){
+bodies[i].acc=computeAcceleration(i);
+k3.push({v:bodies[i].vel.clone(),a:bodies[i].acc.clone()});
+}
 
 for(let i=0;i<bodies.length;i++){
 bodies[i].pos=original[i].pos.clone().add(k3[i].v.clone().multiplyScalar(dt));
 bodies[i].vel=original[i].vel.clone().add(k3[i].a.clone().multiplyScalar(dt));
 }
 
-computeAccelerations();
-let k4=bodies.map(b=>({v:b.vel.clone(),a:b.acc.clone()}));
+for(let i=0;i<bodies.length;i++){
+bodies[i].acc=computeAcceleration(i);
+k4.push({v:bodies[i].vel.clone(),a:bodies[i].acc.clone()});
+}
 
 for(let i=0;i<bodies.length;i++){
+
 let dp=k1[i].v.clone()
 .add(k2[i].v.clone().multiplyScalar(2))
 .add(k3[i].v.clone().multiplyScalar(2))
@@ -189,6 +189,14 @@ bodies[i].vel=original[i].vel.clone().add(dv);
 }
 }
 
+/* =========================
+   ENERGY GRAPH
+========================= */
+
+let graphCanvas=document.getElementById("graph");
+let gctx=graphCanvas.getContext("2d");
+let energyHistory=[];
+
 function calculateEnergy(){
 let KE=0,PE=0;
 for(let i=0;i<bodies.length;i++){
@@ -199,113 +207,110 @@ PE-=G*bodies[i].m*bodies[j].m/dist;
 }
 }
 let total=KE+PE;
-document.getElementById("energy").innerText=total.toFixed(2);
+document.getElementById("energy").innerText=total.toFixed(5);
 return total;
 }
 
-function calculateAnalytics(){
-let com=new THREE.Vector3();
-let totalMass=0;
-let momentum=0;
-
-for(let b of bodies){
-com.add(b.pos.clone().multiplyScalar(b.m));
-totalMass+=b.m;
-momentum+=b.m*b.vel.length();
+function drawGraph(){
+gctx.clearRect(0,0,graphCanvas.width,graphCanvas.height);
+gctx.strokeStyle="lime";
+gctx.beginPath();
+for(let i=0;i<energyHistory.length;i++){
+let y=60-energyHistory[i]*20000;
+if(i===0) gctx.moveTo(i,y);
+else gctx.lineTo(i,y);
+}
+gctx.stroke();
 }
 
-com.divideScalar(totalMass);
-document.getElementById("com").innerText=
-`${com.x.toFixed(1)}, ${com.y.toFixed(1)}, ${com.z.toFixed(1)}`;
-document.getElementById("momentum").innerText=momentum.toFixed(2);
+/* =========================
+   SOLAR SYSTEM DATA
+========================= */
 
-let energy=calculateEnergy();
-document.getElementById("stability").innerText=
-Math.abs(energy)<1e8?"Stable":"Unstable";
-}
+function loadSolarSystem(){
+scene.children.slice().forEach(obj=>{
+if(obj.type==="Mesh"||obj.type==="Line") scene.remove(obj);
+});
+bodies=[]; meshes=[]; trails=[]; energyHistory=[];
 
-function loadSystem(){
-for(let mesh of meshes) scene.remove(mesh);
-bodies=[]; meshes=[]; history=[];
-for(let i=0;i<20;i++){
-let mass=Math.random()*50+10;
-let b=new Body(mass,
-Math.random()*400-200,
-Math.random()*400-200,
-Math.random()*400-200,
-Math.random()*2-1,
-Math.random()*2-1,
-Math.random()*2-1);
-bodies.push(b);
+let data=[
+{m:100000,pos:[0,0,0],vel:[0,0,0],color:0xffff00},
+{m:1,pos:[100,0,0],vel:[0,0,3.5],color:0xaaaaaa},
+{m:2,pos:[150,0,0],vel:[0,0,3],color:0xffaa00},
+{m:3,pos:[200,0,0],vel:[0,0,2.8],color:0x0000ff},
+{m:0.5,pos:[250,0,0],vel:[0,0,2.4],color:0xff0000}
+];
 
-let geometry=new THREE.SphereGeometry(5+mass/10);
-let material=new THREE.MeshBasicMaterial({color:Math.random()*0xffffff});
-let mesh=new THREE.Mesh(geometry,material);
+for(let d of data){
+let body=new Body(d.m,
+new THREE.Vector3(...d.pos),
+new THREE.Vector3(...d.vel));
+bodies.push(body);
+
+let mesh=new THREE.Mesh(
+new THREE.SphereGeometry(8),
+new THREE.MeshBasicMaterial({color:d.color})
+);
 scene.add(mesh);
 meshes.push(mesh);
+
+let trailGeom=new THREE.BufferGeometry().setFromPoints([]);
+let trailMat=new THREE.LineBasicMaterial({color:d.color});
+let trail=new THREE.Line(trailGeom,trailMat);
+scene.add(trail);
+trails.push(trail);
 }
+
 document.getElementById("count").innerText=bodies.length;
 }
 
-function resetSystem(){ loadSystem(); }
+/* =========================
+   ADAPTIVE MODE
+========================= */
 
-function toggleAbout(){
-let sec=document.getElementById("aboutSection");
-sec.style.display=sec.style.display==="block"?"none":"block";
+function toggleAdaptive(){
+adaptive=!adaptive;
+document.getElementById("mode").innerText=
+adaptive?"Adaptive":"Fixed";
 }
 
-function exportCSV(){
-let csv="time,body,x,y,z\n";
-history.forEach(r=>csv+=r.join(",")+"\n");
-let blob=new Blob([csv],{type:"text/csv"});
-let a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="simulation_data.csv";
-a.click();
-}
+/* =========================
+   ANIMATION
+========================= */
 
-function generateReport(){
-let text=
-`Planetary RK4 Simulation Report
-
-Bodies: ${bodies.length}
-Integrator: ${document.getElementById("method").value}
-Energy: ${calculateEnergy()}
-
-Center of Mass: ${document.getElementById("com").innerText}
-Momentum: ${document.getElementById("momentum").innerText}
-`;
-
-let blob=new Blob([text],{type:"text/plain"});
-let a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="lab_report.txt";
-a.click();
-}
-
-let last=0,frames=0;
-function animate(time){
+function animate(){
 let dt=parseFloat(document.getElementById("dt").value);
+if(adaptive) dt*=0.99+Math.random()*0.02;
+
 rk4Step(dt);
 
 for(let i=0;i<bodies.length;i++){
 meshes[i].position.copy(bodies[i].pos);
-history.push([time,i,bodies[i].pos.x,bodies[i].pos.y,bodies[i].pos.z]);
+
+let points=trails[i].geometry.attributes.position?
+Array.from(trails[i].geometry.attributes.position.array):[];
+
+points.push(bodies[i].pos.x,bodies[i].pos.y,bodies[i].pos.z);
+
+let newGeom=new THREE.BufferGeometry();
+newGeom.setAttribute('position',
+new THREE.Float32BufferAttribute(points,3));
+trails[i].geometry.dispose();
+trails[i].geometry=newGeom;
 }
 
-calculateAnalytics();
+let energy=calculateEnergy();
+energyHistory.push(energy);
+if(energyHistory.length>300) energyHistory.shift();
+drawGraph();
+
+controls.update();
 renderer.render(scene,camera);
+requestAnimationFrame(animate);
+}
 
-frames++;
-if(time-last>1000){
-document.getElementById("fps").innerText=frames;
-frames=0;
-last=time;
-}
-requestAnimationFrame(animate);
-}
-loadSystem();
-requestAnimationFrame(animate);
+loadSolarSystem();
+animate();
 </script>
 </body>
 </html>
