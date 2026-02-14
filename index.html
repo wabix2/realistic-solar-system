@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Interstellar RK4 - Multi-Lab Edition</title>
+    <title>Interstellar RK4 - Laboratory Hub</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -13,6 +13,7 @@
             --glass: rgba(0, 5, 15, 0.85);
             --font: 'Segoe UI', system-ui, sans-serif;
             --exp-accent: #ff00ff;
+            --chem-accent: #39ff14; /* Toxic Green for Chemistry */
         }
 
         body { margin: 0; overflow: hidden; font-family: var(--font); background: #000; color: white; cursor: crosshair; }
@@ -23,51 +24,41 @@
             backdrop-filter: blur(15px);
             border: 1px solid rgba(0, 242, 254, 0.3);
             border-radius: 15px;
-            padding: 20px;
+            padding: 15px;
             z-index: 100;
             box-shadow: 0 0 20px rgba(0, 242, 254, 0.1);
         }
 
-        /* Original Left Panel */
-        #main-controls { top: 20px; left: 20px; width: 260px; }
-
-        /* NEW Right Experimental Panel */
-        #exp-controls { 
-            top: 20px; right: 20px; width: 240px; 
-            border: 1px solid rgba(255, 0, 255, 0.3);
-            box-shadow: 0 0 20px rgba(255, 0, 255, 0.1);
+        #main-controls { top: 20px; left: 20px; width: 250px; }
+        #exp-controls { top: 20px; right: 20px; width: 230px; border-color: var(--exp-accent); }
+        
+        /* NEW CHEMISTRY BAR */
+        #chem-controls { 
+            bottom: 20px; right: 20px; width: 230px; 
+            border: 1px solid var(--chem-accent);
+            box-shadow: 0 0 20px rgba(57, 255, 20, 0.1);
         }
 
-        #telemetry { bottom: 20px; right: 20px; width: 220px; font-family: monospace; }
-        #flight-help { bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; display: none; }
+        #telemetry { bottom: 20px; left: 20px; width: 220px; font-family: monospace; }
 
-        h2 { margin: 0 0 15px 0; color: var(--neon); font-size: 1.1em; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        h2 { margin: 0 0 10px 0; font-size: 1em; text-transform: uppercase; letter-spacing: 2px; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        .chem-title { color: var(--chem-accent); }
         .exp-title { color: var(--exp-accent); }
 
-        .stat-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9em; }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 0.85em; }
         .stat-val { color: var(--neon); }
 
-        label { font-size: 0.7em; text-transform: uppercase; color: #888; display: block; margin: 10px 0 5px; }
+        label { font-size: 0.65em; text-transform: uppercase; color: #888; display: block; margin: 8px 0 3px; }
 
         select, input, button {
             width: 100%; background: #0a0a1a; border: 1px solid #333;
-            color: white; padding: 10px; border-radius: 8px; outline: none; font-family: inherit;
+            color: white; padding: 8px; border-radius: 6px; outline: none; font-size: 0.85em;
         }
 
-        .btn-primary {
-            background: linear-gradient(90deg, #00c6ff 0%, #0072ff 100%);
-            border: none; color: white; font-weight: bold; cursor: pointer; margin-top: 10px;
-        }
+        .btn-primary { background: linear-gradient(90deg, #00c6ff 0%, #0072ff 100%); border: none; font-weight: bold; cursor: pointer; }
+        .btn-nova { background: linear-gradient(90deg, #ff4b2b, #ff416c); border: none; font-weight: bold; cursor: pointer; color: white; margin-top: 5px;}
         
-        .btn-tech {
-            background: rgba(0, 242, 254, 0.1);
-            border: 1px solid var(--neon);
-            color: var(--neon);
-            margin-top: 10px;
-            cursor: pointer;
-        }
-
-        /* TECH STYLE PERSONNEL PORTAL */
+        /* TEAM PORTAL */
         #team-portal {
             position: fixed;
             top: 50%; left: 50%;
@@ -82,33 +73,16 @@
             z-index: 1000;
         }
 
-        .team-entry {
-            border-left: 3px solid var(--neon);
-            padding: 8px 15px;
-            margin-bottom: 10px;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 0 10px 10px 0;
-        }
-        .team-role { font-size: 0.65em; color: var(--neon); text-transform: uppercase; letter-spacing: 1px; display: block; }
-        .team-name { font-weight: bold; font-size: 1.1em; }
-
-        .pilot-keys { display: inline-block; background: #333; padding: 2px 6px; border-radius: 4px; color: var(--neon); margin: 0 2px; }
+        .team-entry { border-left: 3px solid var(--neon); padding: 8px 15px; margin-bottom: 10px; background: rgba(255, 255, 255, 0.03); border-radius: 0 10px 10px 0; }
+        .team-role { font-size: 0.65em; color: var(--neon); text-transform: uppercase; display: block; }
     </style>
 </head>
 <body>
 
 <div id="main-controls" class="hud-panel">
     <h2>Mission Control</h2>
-    
-    <label>Navigation Mode</label>
-    <select id="navMode" onchange="toggleFlightMode()">
-        <option value="orbit">Orbit Controls</option>
-        <option value="pilot">Spaceship Pilot</option>
-    </select>
-
     <label>Target Focus</label>
     <select id="cameraTarget" onchange="updateTarget()">
-        <option value="none">Deep Space</option>
         <option value="Sun">Sun</option>
         <option value="Mercury">Mercury</option>
         <option value="Venus">Venus</option>
@@ -119,62 +93,58 @@
         <option value="Uranus">Uranus</option>
         <option value="Neptune">Neptune</option>
     </select>
-
     <label>Time Warp</label>
-    <div style="display:flex; gap:5px;">
-        <button onclick="timeScale = 0">⏸</button>
-        <button onclick="timeScale = 1">▶</button>
-        <input type="range" id="dt" min="0" max="0.1" step="0.001" value="0.015">
-    </div>
-
-    <button class="btn-tech" onclick="togglePortal(true)">👥 ABOUT THE TEAM</button>
-    <button class="btn-primary" onclick="location.reload()">Reset Universe</button>
+    <input type="range" id="dt" min="0" max="0.1" step="0.001" value="0.015">
+    <button class="btn-primary" style="margin-top:10px" onclick="togglePortal(true)">👥 ABOUT THE TEAM</button>
 </div>
 
 <div id="exp-controls" class="hud-panel">
-    <h2 class="exp-title">Experimental Lab</h2>
-    
-    <label>Gravitational Constant (G)</label>
-    <input type="range" id="gConst" min="1000" max="15000" step="100" value="6500" oninput="G = this.value">
-    
-    <label>Sun Mass Factor</label>
-    <input type="range" id="sunMass" min="1000" max="10000" step="100" value="4000" oninput="updateSunMass(this.value)">
+    <h2 class="exp-title">Physics Lab</h2>
+    <label>G-Constant</label>
+    <input type="range" min="1000" max="15000" value="6500" oninput="G = this.value">
+    <button style="margin-top:10px" onclick="location.reload()">Reset Universe</button>
+</div>
 
-    <label>Particle Glow</label>
-    <button class="btn-tech" style="border-color:var(--exp-accent); color:var(--exp-accent);" onclick="toggleTrails()">Toggle Orbit Trails</button>
+<div id="chem-controls" class="hud-panel">
+    <h2 class="chem-title">Chemistry Lab</h2>
+    <label>Stellar Composition</label>
+    <select onchange="updateStellarColor(this.value)">
+        <option value="0xffcc00">Hydrogen/Helium (Yellow)</option>
+        <option value="0x00f2fe">Ionized Blue Giant</option>
+        <option value="0xff4b2b">Red Supergiant</option>
+        <option value="0x39ff14">Unknown Exotic Matter</option>
+    </select>
     
-    <label>Lab Notes</label>
-    <div style="font-size: 0.7em; color: #aaa; line-height: 1.4;">
-        Adjusting <b>G</b> mid-sim will cause orbital destabilization. Use for stress testing the RK4 integrator.
-    </div>
+    <label>Atmospheric Density</label>
+    <input type="range" min="1" max="5" step="0.1" value="1.2" oninput="updateAtmosphere(this.value)">
+
+    <label>Critical State</label>
+    <button class="btn-nova" onclick="triggerSupernova()">💥 TRIGGER SUPERNOVA</button>
 </div>
 
 <div id="team-portal">
-    <h2 style="text-align: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">Personnel Portal</h2>
-    <div class="team-entry"><span class="team-role">Lead Developer</span><span class="team-name">Wabi Tafese</span></div>
-    <div class="team-entry"><span class="team-role">Lead Programmer</span><span class="team-name">Rakeb Tewodros</span></div>
-    <div class="team-entry"><span class="team-role">Head Researcher</span><span class="team-name">Henok Yared</span></div>
-    <div class="team-entry"><span class="team-role">Presentation Specialist</span><span class="team-name">Rediet Mebt</span></div>
-    <div class="team-entry"><span class="team-role">Data Analyst</span><span class="team-name">Aklesiya Negalign</span></div>
-    <div class="team-entry"><span class="team-role">Research Support</span><span class="team-name">Hemen Tadese</span></div>
-    <div class="team-entry"><span class="team-role">Project Coordinator</span><span class="team-name">Arsema Laikemariam</span></div>
-    <button class="btn-primary" style="margin-top: 15px;" onclick="togglePortal(false)">CLOSE PORTAL</button>
+    <h2 style="text-align: center; border-bottom: 1px solid #333; padding-bottom: 10px;">Personnel Portal</h2>
+    <div class="team-entry"><span class="team-role">Lead Developer</span><b>Wabi Tafese</b></div>
+    <div class="team-entry"><span class="team-role">Lead Programmer</span><b>Rakeb Tewodros</b></div>
+    <div class="team-entry"><span class="team-role">Head Researcher</span><b>Henok Yared</b></div>
+    <div class="team-entry"><span class="team-role">Presentation Specialist</span><b>Rediet Mebt</b></div>
+    <div class="team-entry"><span class="team-role">Data Analyst</span><b>Aklesiya Negalign</b></div>
+    <div class="team-entry"><span class="team-role">Research Support</span><b>Hemen Tadese</b></div>
+    <div class="team-entry"><span class="team-role">Project Coordinator</span><b>Arsema Laikemariam</b></div>
+    <button class="btn-primary" style="margin-top: 15px;" onclick="togglePortal(false)">CLOSE</button>
 </div>
 
 <div id="telemetry" class="hud-panel">
     <h2>Telemetry</h2>
-    <div class="stat-row"><span>Target:</span> <span id="tel-name" class="stat-val">None</span></div>
-    <div class="stat-row"><span>Velocity:</span> <span id="tel-speed" class="stat-val">0</span></div>
-    <div class="stat-row"><span>Distance:</span> <span id="tel-dist" class="stat-val">0</span></div>
+    <div class="stat-row"><span>Status:</span> <span id="tel-status" class="stat-val">Stable</span></div>
+    <div class="stat-row"><span>Target:</span> <span id="tel-name" class="stat-val">Sun</span></div>
     <div class="stat-row"><span>FPS:</span> <span id="fps" class="stat-val">60</span></div>
 </div>
 
 <script>
 let scene, camera, renderer, controls, raycaster, mouse;
-let bodies = [], meshes = [], trails = [];
-let targetBody = null, isPilot = false;
-let timeScale = 1, G = 6500, trailsVisible = true;
-let keys = {};
+let bodies = [], meshes = [], glows = [];
+let targetBody = null, G = 6500, nova = false;
 
 function init() {
     scene = new THREE.Scene();
@@ -182,37 +152,23 @@ function init() {
     camera.position.set(0, 2000, 4000);
     renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setClearColor(0x000005);
     document.body.appendChild(renderer.domElement);
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    raycaster = new THREE.Raycaster();
-    mouse = new THREE.Vector2();
-    createMilkyWay();
-    setupUniverse();
-    window.addEventListener('keydown', e => keys[e.code] = true);
-    window.addEventListener('keyup', e => keys[e.code] = false);
-    window.addEventListener('mousedown', onPlanetClick);
-}
-
-function togglePortal(show) { document.getElementById('team-portal').style.display = show ? 'block' : 'none'; }
-function toggleTrails() { trailsVisible = !trailsVisible; trails.forEach(t => t.visible = trailsVisible); }
-function updateSunMass(val) { if(bodies[0]) bodies[0].m = parseFloat(val); }
-
-function createMilkyWay() {
+    
+    // Background Stars
     const geo = new THREE.BufferGeometry();
     const pos = [];
-    for(let i=0; i<30000; i++) {
-        const r = Math.random() * 20000;
-        const theta = Math.random() * Math.PI * 2;
-        pos.push(Math.cos(theta)*r, (Math.random()-0.5)*5000, Math.sin(theta)*r);
-    }
+    for(let i=0; i<20000; i++) pos.push((Math.random()-0.5)*40000, (Math.random()-0.5)*40000, (Math.random()-0.5)*40000);
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({color: 0xffffff, size: 1.2, transparent: true, opacity: 0.6})));
+    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({color: 0xffffff, size: 1.5})));
+
+    setupUniverse();
+    animate();
 }
 
 const solarData = [
-    { name: "Sun", m: 4000, d: 0, s: 120, c: 0xffcc00, v: 0 },
+    { name: "Sun", m: 4500, d: 0, s: 130, c: 0xffcc00, v: 0 },
     { name: "Mercury", m: 5, d: 350, s: 10, c: 0x999999, v: 9.5 },
     { name: "Venus", m: 10, d: 550, s: 18, c: 0xffddaa, v: 8.2 },
     { name: "Earth", m: 10, d: 800, s: 20, c: 0x2288ff, v: 7.1 },
@@ -228,18 +184,39 @@ function setupUniverse() {
         const mesh = new THREE.Mesh(new THREE.SphereGeometry(p.s, 48, 48), new THREE.MeshPhongMaterial({ color: p.c, emissive: p.name === "Sun" ? p.c : 0, emissiveIntensity: 0.8 }));
         mesh.position.set(p.d, 0, 0);
         scene.add(mesh);
+
+        const glow = new THREE.Mesh(new THREE.SphereGeometry(p.s*1.2, 32, 32), new THREE.MeshBasicMaterial({color: p.c, transparent:true, opacity:0.15, side: THREE.BackSide}));
+        mesh.add(glow);
+        glows.push(glow);
+
         bodies.push({ name: p.name, m: p.m, mesh, pos: new THREE.Vector3(p.d, 0, 0), vel: new THREE.Vector3(0, 0, p.v) });
-        meshes.push(mesh);
-        const trail = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color: p.c, transparent:true, opacity:0.2}));
-        trail.userData = { pts: [] };
-        trails.push(trail);
-        scene.add(trail);
+        if(p.name === "Sun") targetBody = bodies[0];
     });
     scene.add(new THREE.PointLight(0xffffff, 2.5, 20000));
+    scene.add(new THREE.AmbientLight(0x222233));
 }
 
+function updateStellarColor(color) {
+    const c = parseInt(color);
+    bodies[0].mesh.material.color.setHex(c);
+    bodies[0].mesh.material.emissive.setHex(c);
+    glows[0].material.color.setHex(c);
+}
+
+function updateAtmosphere(val) {
+    glows.forEach((g, i) => { if(i>0) g.scale.setScalar(val); });
+}
+
+function triggerSupernova() {
+    nova = true;
+    document.getElementById('tel-status').innerText = "SUPERNOVA EVENT";
+    document.getElementById('tel-status').style.color = "#ff416c";
+}
+
+function togglePortal(show) { document.getElementById('team-portal').style.display = show ? 'block' : 'none'; }
+function updateTarget() { targetBody = bodies.find(b => b.name === document.getElementById('cameraTarget').value); }
+
 function stepRK4(dt) {
-    if(dt === 0) return;
     const calcA = (ps) => ps.map((p, i) => {
         let a = new THREE.Vector3();
         ps.forEach((p2, j) => {
@@ -263,35 +240,31 @@ function stepRK4(dt) {
     });
 }
 
-function toggleFlightMode() { isPilot = (document.getElementById('navMode').value === 'pilot'); controls.enabled = !isPilot; if(isPilot) targetBody = null; }
-function updateTarget() { const val = document.getElementById('cameraTarget').value; targetBody = (val === "none") ? null : bodies.find(b => b.name === val); }
-function onPlanetClick(e) { 
-    mouse.x = (e.clientX/window.innerWidth)*2-1; mouse.y = -(e.clientY/window.innerHeight)*2+1; 
-    raycaster.setFromCamera(mouse, camera); 
-    const hits = raycaster.intersectObjects(meshes); 
-    if(hits.length > 0) { targetBody = bodies.find(b => b.mesh === hits[0].object); document.getElementById('cameraTarget').value = targetBody.name; }
-}
-
-let lastT = 0, fCount = 0;
-function animate(t) {
+function animate() {
     requestAnimationFrame(animate);
-    const dt = parseFloat(document.getElementById('dt').value) * timeScale;
+    const dt = parseFloat(document.getElementById('dt').value);
     stepRK4(dt);
-    bodies.forEach((b, i) => {
-        b.mesh.position.copy(b.pos);
-        if(dt > 0 && trailsVisible) {
-            let pts = trails[i].userData.pts; pts.push(b.pos.clone()); if(pts.length > 300) pts.shift();
-            trails[i].geometry.setFromPoints(pts);
+    
+    bodies.forEach(b => b.mesh.position.copy(b.pos));
+
+    if(nova) {
+        bodies[0].mesh.scale.addScalar(0.5);
+        bodies[0].m += 100;
+        if(bodies[0].mesh.scale.x > 50) {
+            scene.background = new THREE.Color(0xffffff);
+            setTimeout(() => { location.reload(); }, 500);
         }
-    });
-    if(targetBody) controls.target.lerp(targetBody.pos, 0.1);
+    }
+
+    if(targetBody) {
+        controls.target.lerp(targetBody.pos, 0.1);
+        document.getElementById('tel-name').innerText = targetBody.name;
+    }
     controls.update();
     renderer.render(scene, camera);
-    fCount++; if(t - lastT > 1000) { document.getElementById('fps').innerText = fCount; fCount=0; lastT=t; }
 }
 
 init();
-animate(0);
 </script>
 </body>
 </html>
