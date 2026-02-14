@@ -16,7 +16,6 @@
 
         body { margin: 0; overflow: hidden; font-family: var(--font); background: #000; color: white; cursor: crosshair; }
         
-        /* Sci-Fi HUD Panels */
         .hud-panel {
             position: absolute;
             background: var(--glass);
@@ -60,7 +59,6 @@
         }
         .btn-tech:hover { background: var(--neon); color: #000; }
 
-        /* TECH STYLE ABOUT SECTION */
         #team-portal {
             position: fixed;
             top: 50%; left: 50%;
@@ -137,13 +135,13 @@
 <div id="team-portal">
     <h2 style="text-align: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">Personnel Portal</h2>
     
-    <div class="team-entry"><span class="team-role">Lead Developer</span><span class="team-name">Wabi</span></div>
+    <div class="team-entry"><span class="team-role">Lead Developer</span><span class="team-name">Wabi Tafese</span></div>
     <div class="team-entry"><span class="team-role">Lead Programmer</span><span class="team-name">Rakeb Tewodros</span></div>
     <div class="team-entry"><span class="team-role">Head Researcher</span><span class="team-name">Henok Yared</span></div>
-    <div class="team-entry"><span class="team-role">Presentation Specialist</span><span class="team-name">Rediet</span></div>
+    <div class="team-entry"><span class="team-role">Presentation Specialist</span><span class="team-name">Rediet Mebt</span></div>
     <div class="team-entry"><span class="team-role">Data Analyst</span><span class="team-name">Aklesiya Negalign</span></div>
     <div class="team-entry"><span class="team-role">Research Support</span><span class="team-name">Hemen Tadese</span></div>
-    <div class="team-entry"><span class="team-role">Project Coordinator</span><span class="team-name">Arsema</span></div>
+    <div class="team-entry"><span class="team-role">Project Coordinator</span><span class="team-name">Arsema Laikemariam</span></div>
 
     <button class="btn-primary" style="margin-top: 15px;" onclick="togglePortal(false)">CLOSE PORTAL</button>
 </div>
@@ -163,15 +161,11 @@
 </div>
 
 <script>
-/* ============================
-   GLOBALS & CORE
-============================ */
 let scene, camera, renderer, controls, raycaster, mouse;
 let bodies = [], meshes = [], labels = [], trails = [];
 let targetBody = null, isPilot = false;
 let timeScale = 1, G = 6500;
 let keys = {};
-
 let moveVel = new THREE.Vector3();
 
 function init() {
