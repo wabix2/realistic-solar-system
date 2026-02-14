@@ -1,295 +1,361 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Planetary RK4 Simulation Lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced Multi-Lab Simulator</title>
 
+<!-- Three.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
+<!-- OrbitControls -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- FileSaver.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 <style>
-body{
-margin:0;
-overflow:hidden;
-font-family:Segoe UI, sans-serif;
-background:black;
-color:white;
-}
-
-/* ===== NAVBAR ===== */
-.navbar{
-position:fixed;
-top:0;
-width:100%;
-background:rgba(0,0,0,0.8);
-display:flex;
-justify-content:space-around;
-padding:10px;
-z-index:10;
-}
-.navbar button{
-background:none;
-border:none;
-color:white;
-font-size:16px;
-cursor:pointer;
-}
-.navbar button:hover{
-color:#00ffff;
-}
-
-/* ===== CANVAS ===== */
-canvas{
-position:absolute;
-top:0;
-left:0;
-}
-
-/* ===== CONTROL PANEL ===== */
-.panel{
-position:absolute;
-top:70px;
-left:20px;
-background:rgba(255,255,255,0.08);
-backdrop-filter:blur(12px);
-padding:15px;
-border-radius:15px;
-width:270px;
-}
-
-button{
-padding:6px 10px;
-margin:4px 0;
-border:none;
-border-radius:6px;
-cursor:pointer;
-font-weight:bold;
-transition:0.3s;
-}
-
-.btn{
-background:#00c6ff;
-color:white;
-}
-
-.btn.active{
-background:#00ff95;
-color:black;
-box-shadow:0 0 10px #00ff95;
-}
-
-.slider{
-width:100%;
-}
-
-/* ===== ABOUT MODAL ===== */
-#aboutModal{
-position:absolute;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-background:white;
-color:black;
-padding:20px;
-border-radius:12px;
-display:none;
-width:350px;
-z-index:20;
-}
+    body, html {
+        margin: 0; padding: 0;
+        font-family: 'Inter', sans-serif;
+        background-color: #0b0c1b;
+        overflow: hidden;
+    }
+    #navbar {
+        position: fixed;
+        top:0; left:0; right:0;
+        height: 50px;
+        background: linear-gradient(90deg,#1f1f3f,#3a3a6e);
+        display:flex;
+        align-items:center;
+        justify-content: space-between;
+        padding:0 20px;
+        z-index:100;
+        color:#fff;
+    }
+    #navbar button {
+        background: #4a4a9e;
+        color: #fff;
+        border: none;
+        padding: 8px 15px;
+        margin:0 5px;
+        border-radius:5px;
+        cursor:pointer;
+        transition: 0.2s;
+    }
+    #navbar button.active {
+        background:#ffaa00;
+        color:#000;
+    }
+    #aboutTeam {
+        display:none;
+        position:absolute;
+        top:50px; right:20px;
+        background:#1e1e3f;
+        padding:10px 15px;
+        border-radius:8px;
+        border:1px solid #3a3a6e;
+        z-index:101;
+    }
+    #aboutTeam h3 {margin-top:0;color:#00ffaa;}
+    #aboutTeam ul {margin:0;padding:0;list-style:none;color:#fff;}
+    #aboutTeam li {margin:5px 0;}
+    #controlsPanel, #chemPanel {
+        position:absolute;
+        top:50px; left:0;
+        width:300px;
+        bottom:0;
+        background:#1e1e3f;
+        overflow-y:auto;
+        padding:15px;
+        border-right:2px solid #3a3a6e;
+        display:none;
+    }
+    #chemPanel {background:#2a1f2a;}
+    #simCanvas {display:block; width:100%; height:100vh;}
+    .control-group {margin-bottom:20px;padding:10px;border:1px solid #3a3a6e;border-radius:8px;background:#25254d;}
+    label {color:#ffcc00;font-weight:bold;}
+    input, button {width:100%; margin-top:5px; padding:5px;}
+    canvas#energyChart {width:100%!important;height:150px!important;margin-top:10px;}
 </style>
 </head>
-
 <body>
 
-<div class="navbar">
-<button onclick="showAstronomy()">🌌 Astronomy Lab</button>
-<button onclick="showChemistry()">🧪 Chemistry Lab</button>
-<button onclick="openAbout()">👥 About Team</button>
+<!-- Navbar -->
+<div id="navbar">
+    <div>
+        <button id="astroBtn" class="active">Astronomy Lab</button>
+        <button id="chemBtn">Chemistry Lab</button>
+        <button id="aboutBtn">About Team</button>
+    </div>
+    <div>
+        <button id="exportCSV">Export CSV</button>
+    </div>
 </div>
 
-<canvas id="canvas"></canvas>
-
-<div class="panel" id="astronomyPanel">
-<h3>🌠 Simulation Controls</h3>
-<button id="startBtn" class="btn" onclick="toggleSim(this)">Start</button>
-<button id="trailBtn" class="btn" onclick="toggleTrails(this)">Orbit Trails</button>
-<button class="btn" onclick="reset()">Reset</button>
-
-<h3>⚙ Time Step</h3>
-<input type="range" min="0.001" max="0.05" step="0.001" value="0.01" id="dt" class="slider">
+<!-- About Team Dropdown -->
+<div id="aboutTeam">
+    <h3>Team Members & Roles</h3>
+    <ul>
+        <li>Wabi – Science Shared Campus, Team Leader & Programmer</li>
+        <li>Henok Yared – Science Shared Campus, Researcher</li>
+        <li>Rediet – Science Shared Campus, Research & Presentation</li>
+        <li>Hemen Tadese – Adama Science & Technology University Special School, Research Support</li>
+        <li>Aklesiya Negalign – Science Shared Campus, Researcher</li>
+        <li>Arsema – Science Shared Campus, Assistant Project Coordinator</li>
+        <li>Rakeb Tewodros – Science Shared Campus, Programmer</li>
+    </ul>
 </div>
 
-<div class="panel" id="chemistryPanel" style="display:none;">
-<h3>🧪 Chemistry Lab</h3>
-<p>Simple Reaction Experiment</p>
-<button class="btn" onclick="startReaction()">Start Reaction</button>
-<p id="reactionResult"></p>
+<!-- Astronomy Controls -->
+<div id="controlsPanel">
+    <div class="control-group">
+        <label>Simulation Speed (Δt):</label>
+        <input type="range" id="timeStep" min="0.001" max="0.05" step="0.001" value="0.01">
+    </div>
+    <div class="control-group">
+        <label>Toggle Orbit Trails</label>
+        <button id="trailBtn">ON</button>
+    </div>
+    <div class="control-group">
+        <canvas id="energyChart"></canvas>
+    </div>
 </div>
 
-<div id="aboutModal">
-<h3>👥 Team Members & Roles</h3>
-<ul>
-<li><b>Wabi</b> – Team Leader & Programmer</li>
-<li><b>Henok Yared</b> – Researcher</li>
-<li><b>Rediet</b> – Research & Presentation</li>
-<li><b>Hemen Tadese</b> – Research Support</li>
-<li><b>Aklesiya Negalign</b> – Researcher</li>
-<li><b>Arsema</b> – Assistant Project Coordinator</li>
-<li><b>Rakeb Tewodros</b> – Programmer</li>
-</ul>
-<button onclick="closeAbout()">Close</button>
+<!-- Chemistry Panel -->
+<div id="chemPanel">
+    <div class="control-group">
+        <label>Type Reaction:</label>
+        <input type="text" id="reactionInput" placeholder="e.g., H2 + O2 → H2O">
+        <button id="runReaction">Run Reaction</button>
+    </div>
+    <div id="reactionOutput"></div>
 </div>
+
+<!-- WebGL Canvas -->
+<canvas id="simCanvas"></canvas>
 
 <script>
-const canvas=document.getElementById("canvas");
-const ctx=canvas.getContext("2d");
-canvas.width=window.innerWidth;
-canvas.height=window.innerHeight;
+// =========================
+// Navbar & Panel Logic
+// =========================
+const astroBtn = document.getElementById('astroBtn');
+const chemBtn = document.getElementById('chemBtn');
+const aboutBtn = document.getElementById('aboutBtn');
+const controlsPanel = document.getElementById('controlsPanel');
+const chemPanel = document.getElementById('chemPanel');
+const aboutTeam = document.getElementById('aboutTeam');
 
-let running=false;
-let trails=false;
-let bodies=[];
-const G=0.0001;
-
-/* ===== GALAXY BACKGROUND ===== */
-let stars=[];
-for(let i=0;i<400;i++){
-stars.push({x:Math.random()*canvas.width,
-y:Math.random()*canvas.height,
-r:Math.random()*1.5});
+astroBtn.onclick = () => {
+    astroBtn.classList.add('active'); chemBtn.classList.remove('active');
+    controlsPanel.style.display='block'; chemPanel.style.display='none';
 }
+chemBtn.onclick = () => {
+    chemBtn.classList.add('active'); astroBtn.classList.remove('active');
+    controlsPanel.style.display='none'; chemPanel.style.display='block';
+}
+aboutBtn.onclick = () => { aboutTeam.style.display = aboutTeam.style.display==='none'?'block':'none'; }
 
-function drawGalaxy(){
-ctx.fillStyle="black";
-ctx.fillRect(0,0,canvas.width,canvas.height);
+// =========================
+// Astronomy Lab: 3D WebGL + RK4
+// =========================
+let scene = new THREE.Scene();
+let camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1e7);
+camera.position.set(0,200,400);
 
-stars.forEach(s=>{
-ctx.beginPath();
-ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-ctx.fillStyle="white";
-ctx.fill();
+let renderer = new THREE.WebGLRenderer({canvas:document.getElementById('simCanvas'),antialias:true});
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x000010);
+
+let controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// Galaxy background
+let loader = new THREE.TextureLoader();
+loader.load('https://i.ibb.co/vJ1DFbn/galaxy-bg.jpg', function(texture){
+    scene.background = texture;
 });
-}
 
-/* ===== BODY CLASS ===== */
-class Body{
-constructor(name,x,y,mass,vx,vy,color){
-this.name=name;
-this.x=x; this.y=y;
-this.mass=mass;
-this.vx=vx; this.vy=vy;
-this.color=color;
-this.trail=[];
-}
-draw(){
-ctx.beginPath();
-ctx.arc(this.x,this.y,Math.max(4,Math.log(this.mass)),0,Math.PI*2);
-ctx.fillStyle=this.color;
-ctx.fill();
+// Real Solar System Data (scaled)
+const AU = 1.496e8; // km
+const scale = 0.0005; // arbitrary scaling for canvas
+const planetsData = [
+    {name:'Mercury', radius:2440, distance:0.387*AU, period:88},
+    {name:'Venus', radius:6052, distance:0.723*AU, period:225},
+    {name:'Earth', radius:6371, distance:1*AU, period:365},
+    {name:'Mars', radius:3390, distance:1.524*AU, period:687},
+    {name:'Jupiter', radius:69911, distance:5.203*AU, period:4333},
+    {name:'Saturn', radius:58232, distance:9.537*AU, period:10759},
+    {name:'Uranus', radius:25362, distance:19.191*AU, period:30687},
+    {name:'Neptune', radius:24622, distance:30.07*AU, period:60190}
+];
 
-ctx.fillStyle="white";
-ctx.font="12px Arial";
-ctx.fillText(this.name,this.x+5,this.y+5);
+// Sun
+let sunGeometry = new THREE.SphereGeometry(69634*scale,32,32);
+let sunMaterial = new THREE.MeshBasicMaterial({color:0xffaa00});
+let sunMesh = new THREE.Mesh(sunGeometry,sunMaterial);
+scene.add(sunMesh);
 
-if(trails){
-ctx.beginPath();
-this.trail.forEach(p=>ctx.lineTo(p.x,p.y));
-ctx.strokeStyle=this.color;
-ctx.stroke();
-}
-}
-}
-
-/* ===== REAL 8 PLANETS ===== */
-function init(){
-bodies=[];
-let cx=canvas.width/2;
-let cy=canvas.height/2;
-
-bodies.push(new Body("Sun",cx,cy,100000,0,0,"yellow"));
-bodies.push(new Body("Mercury",cx+60,cy,10,0,4,"gray"));
-bodies.push(new Body("Venus",cx+90,cy,15,0,3.5,"orange"));
-bodies.push(new Body("Earth",cx+130,cy,20,0,3,"blue"));
-bodies.push(new Body("Mars",cx+170,cy,12,0,2.7,"red"));
-bodies.push(new Body("Jupiter",cx+230,cy,200,0,2,"brown"));
-bodies.push(new Body("Saturn",cx+300,cy,150,0,1.7,"gold"));
-bodies.push(new Body("Uranus",cx+360,cy,100,0,1.3,"lightblue"));
-bodies.push(new Body("Neptune",cx+420,cy,100,0,1.1,"purple"));
-}
-init();
-
-/* ===== PHYSICS UPDATE ===== */
-function update(){
-let dt=parseFloat(document.getElementById("dt").value);
-bodies.forEach(b=>{
-let ax=0, ay=0;
-bodies.forEach(o=>{
-if(o!==b){
-let dx=o.x-b.x;
-let dy=o.y-b.y;
-let dist=Math.sqrt(dx*dx+dy*dy);
-let force=G*o.mass/(dist*dist);
-ax+=force*dx/dist;
-ay+=force*dy/dist;
-}
+// Planets
+let planetMeshes = [];
+let planetObjects = []; // Physics objects
+planetsData.forEach(p=>{
+    let geom = new THREE.SphereGeometry(p.radius*scale*10,32,32);
+    let mat = new THREE.MeshStandardMaterial({color:Math.random()*0xffffff});
+    let mesh = new THREE.Mesh(geom,mat);
+    let angle = Math.random()*Math.PI*2;
+    mesh.position.set(p.distance*scale*Math.cos(angle),0,p.distance*scale*Math.sin(angle));
+    planetMeshes.push(mesh);
+    scene.add(mesh);
+    // Physics object
+    planetObjects.push({
+        name:p.name,
+        mass:p.radius*1e3,
+        pos:new THREE.Vector3(mesh.position.x, mesh.position.y, mesh.position.z),
+        vel:new THREE.Vector3(-Math.sin(angle)*30,0,Math.cos(angle)*30),
+        mesh:mesh
+    });
 });
-b.vx+=ax*dt;
-b.vy+=ay*dt;
-b.x+=b.vx*dt;
-b.y+=b.vy*dt;
 
-b.trail.push({x:b.x,y:b.y});
-if(b.trail.length>150) b.trail.shift();
-});
+// Lighting
+let ambientLight = new THREE.AmbientLight(0x888888);
+scene.add(ambientLight);
+let pointLight = new THREE.PointLight(0xffffff,1,0);
+pointLight.position.set(0,0,0);
+scene.add(pointLight);
+
+// Physics constants
+const G = 6.6743e-11;
+let deltaT = parseFloat(document.getElementById('timeStep').value);
+document.getElementById('timeStep').oninput=(e)=>{deltaT=parseFloat(e.target.value);}
+
+// Energy chart
+let energyChartCtx = document.getElementById('energyChart').getContext('2d');
+let energyChart = new Chart(energyChartCtx,{type:'line',data:{labels:[],datasets:[{label:'Total Energy',data:[],borderColor:'#00ffcc',fill:false}]},options:{responsive:true,animation:false}});
+
+// RK4 Physics Step
+function rk4Step(){
+    let n = planetObjects.length;
+    let positions=[],velocities=[];
+    planetObjects.forEach(o=>{positions.push(o.pos.clone());velocities.push(o.vel.clone());});
+    // Compute k1
+    let k1v=[],k1p=[];
+    for(let i=0;i<n;i++){
+        k1v.push(computeAcceleration(i,positions));
+        k1p.push(velocities[i].clone());
+    }
+    // Compute k2
+    let k2p=[],k2v=[];
+    for(let i=0;i<n;i++){
+        let pos=positions[i].clone().add(k1p[i].clone().multiplyScalar(deltaT*0.5));
+        let vel=velocities[i].clone().add(k1v[i].clone().multiplyScalar(deltaT*0.5));
+        k2p.push(vel); k2v.push(computeAcceleration(i,positions));
+    }
+    // K3
+    let k3p=[],k3v=[];
+    for(let i=0;i<n;i++){
+        let pos=positions[i].clone().add(k2p[i].clone().multiplyScalar(deltaT*0.5));
+        let vel=velocities[i].clone().add(k2v[i].clone().multiplyScalar(deltaT*0.5));
+        k3p.push(vel); k3v.push(computeAcceleration(i,positions));
+    }
+    // K4
+    let k4p=[],k4v=[];
+    for(let i=0;i<n;i++){
+        let pos=positions[i].clone().add(k3p[i].clone().multiplyScalar(deltaT));
+        let vel=velocities[i].clone().add(k3v[i].clone().multiplyScalar(deltaT));
+        k4p.push(vel); k4v.push(computeAcceleration(i,positions));
+    }
+    // Final update
+    for(let i=0;i<n;i++){
+        planetObjects[i].pos.add(k1p[i].clone().add(k2p[i].clone().multiplyScalar(2)).add(k3p[i].clone().multiplyScalar(2)).add(k4p[i]).multiplyScalar(deltaT/6));
+        planetObjects[i].vel.add(k1v[i].clone().add(k2v[i].clone().multiplyScalar(2)).add(k3v[i].clone().multiplyScalar(2)).add(k4v[i]).multiplyScalar(deltaT/6));
+        planetObjects[i].mesh.position.copy(planetObjects[i].pos);
+    }
 }
 
-/* ===== DRAW LOOP ===== */
-function draw(){
-drawGalaxy();
-bodies.forEach(b=>b.draw());
+// Gravity acceleration
+function computeAcceleration(i, positions){
+    let acc = new THREE.Vector3(0,0,0);
+    let pos_i = positions[i];
+    for(let j=0;j<positions.length;j++){
+        if(j===i) continue;
+        let r = new THREE.Vector3().subVectors(positions[j],pos_i);
+        let distSq = r.lengthSq()+1e3; 
+        acc.add(r.multiplyScalar(G*planetObjects[j].mass/distSq/distSq**0.5));
+    }
+    return acc;
 }
 
+// Animation Loop
 function animate(){
-if(running) update();
-draw();
-requestAnimationFrame(animate);
+    requestAnimationFrame(animate);
+    rk4Step();
+    controls.update();
+    renderer.render(scene,camera);
+    // Energy calculation
+    let E=0;
+    planetObjects.forEach(p=>{
+        let KE=0.5*p.mass*p.vel.lengthSq();
+        let PE=0;
+        planetObjects.forEach(q=>{
+            if(p===q) return;
+            let r = p.pos.clone().sub(q.pos).length();
+            PE+=-G*p.mass*q.mass/r;
+        });
+        E+=KE+PE*0.5;
+    });
+    let t=new Date().getTime();
+    energyChart.data.labels.push('');
+    energyChart.data.datasets[0].data.push(E*1e-20);
+    if(energyChart.data.labels.length>100){energyChart.data.labels.shift(); energyChart.data.datasets[0].data.shift();}
+    energyChart.update();
 }
 animate();
 
-/* ===== BUTTON LOGIC ===== */
-function toggleSim(btn){
-running=!running;
-btn.classList.toggle("active");
-btn.textContent=running?"Pause":"Start";
+// =========================
+// Chemistry Lab
+// =========================
+const runReactionBtn = document.getElementById('runReaction');
+const reactionInput = document.getElementById('reactionInput');
+const reactionOutput = document.getElementById('reactionOutput');
+runReactionBtn.onclick=()=>{
+    const reaction = reactionInput.value.trim();
+    if(!reaction){reactionOutput.innerHTML="<p style='color:#ff0000;'>Enter a valid reaction!</p>"; return;}
+    reactionOutput.innerHTML=`<p style='color:#00ffcc;'>Running Reaction: ${reaction}</p>`;
+    // Simple animation: colored bubbles
+    for(let i=0;i<20;i++){
+        let div = document.createElement('div');
+        div.style.width='10px'; div.style.height='10px';
+        div.style.borderRadius='50%';
+        div.style.background=['#ff0000','#00ff00','#0000ff'][Math.floor(Math.random()*3)];
+        div.style.position='absolute';
+        div.style.left=Math.random()*window.innerWidth+'px';
+        div.style.top=Math.random()*window.innerHeight+'px';
+        div.style.opacity='0.8';
+        document.body.appendChild(div);
+        setTimeout(()=>{div.remove();},1500);
+    }
 }
 
-function toggleTrails(btn){
-trails=!trails;
-btn.classList.toggle("active");
+// =========================
+// CSV Export
+// =========================
+document.getElementById('exportCSV').onclick=()=>{
+    let csv='Name,X,Y,Z,Vx,Vy,Vz\n';
+    planetObjects.forEach(p=>{
+        csv+=`${p.name},${p.pos.x},${p.pos.y},${p.pos.z},${p.vel.x},${p.vel.y},${p.vel.z}\n`;
+    });
+    let blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+    saveAs(blob,"simulation.csv");
 }
 
-function reset(){ init(); }
-
-/* ===== NAVIGATION ===== */
-function showAstronomy(){
-document.getElementById("astronomyPanel").style.display="block";
-document.getElementById("chemistryPanel").style.display="none";
-}
-
-function showChemistry(){
-document.getElementById("astronomyPanel").style.display="none";
-document.getElementById("chemistryPanel").style.display="block";
-}
-
-function startReaction(){
-document.getElementById("reactionResult").innerText=
-"Hydrogen + Oxygen → Water (H₂O) Reaction Simulated!";
-}
-
-/* ===== ABOUT ===== */
-function openAbout(){
-document.getElementById("aboutModal").style.display="block";
-}
-function closeAbout(){
-document.getElementById("aboutModal").style.display="none";
-}
+// =========================
+// Window Resize
+// =========================
+window.addEventListener('resize',()=>{
+    camera.aspect=window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth,window.innerHeight);
+});
 </script>
 
 </body>
