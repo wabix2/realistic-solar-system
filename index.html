@@ -2,237 +2,186 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Interstellar RK4 - Responsive Lab</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interstellar RK4 - Mobile Optimized</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
     <style>
         :root {
             --neon: #00f2fe;
-            --glass: rgba(0, 5, 15, 0.9);
+            --glass: rgba(0, 5, 15, 0.95);
             --font: 'Segoe UI', system-ui, sans-serif;
             --chem-accent: #39ff14;
             --astro-accent: #ff00ff;
         }
 
-        body { margin: 0; overflow: hidden; font-family: var(--font); background: #000; color: white; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: var(--font); color: white; }
         
-        /* RESPONSIVE TOP NAV */
+        /* NAVIGATION BAR */
         #top-nav {
-            position: absolute;
-            top: 0; left: 0; width: 100%;
-            height: 60px;
-            background: var(--glass);
-            border-bottom: 1px solid rgba(0, 242, 254, 0.3);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            gap: 10px;
+            position: fixed; top: 0; left: 0; width: 100%; height: 50px;
+            background: var(--glass); border-bottom: 1px solid rgba(0, 242, 254, 0.3);
+            display: flex; justify-content: center; align-items: center; z-index: 1000; gap: 15px;
         }
 
         .nav-tab {
-            padding: 8px 15px;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: bold;
-            font-size: 0.8em;
-            transition: 0.3s;
-            border-bottom: 2px solid transparent;
-            white-space: nowrap;
+            padding: 5px 12px; cursor: pointer; text-transform: uppercase;
+            letter-spacing: 1px; font-weight: bold; font-size: 0.75em;
+            transition: 0.3s; border-bottom: 2px solid transparent;
+        }
+        .active-astro { color: var(--astro-accent); border-bottom-color: var(--astro-accent); }
+        .active-chem { color: var(--chem-accent); border-bottom-color: var(--chem-accent); }
+
+        /* MOBILE OVERLAY TOGGLE */
+        #mobile-toggle {
+            display: none; position: fixed; bottom: 20px; right: 20px;
+            z-index: 1100; background: var(--neon); color: #000;
+            border: none; padding: 12px 20px; border-radius: 50px;
+            font-weight: bold; box-shadow: 0 0 15px var(--neon);
         }
 
-        .nav-tab.active-astro { color: var(--astro-accent); border-bottom-color: var(--astro-accent); }
-        .nav-tab.active-chem { color: var(--chem-accent); border-bottom-color: var(--chem-accent); }
-
+        /* PANELS */
         .hud-panel {
-            position: absolute;
-            background: var(--glass);
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(0, 242, 254, 0.3);
-            border-radius: 12px;
-            padding: 15px;
-            z-index: 100;
-            max-width: 90vw;
+            position: fixed; background: var(--glass); backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 12px;
+            padding: 15px; z-index: 500; transition: transform 0.4s ease;
         }
 
-        /* POSITIONING */
-        #main-controls { top: 70px; left: 10px; width: 220px; }
-        #lab-panel { top: 70px; right: 10px; width: 220px; }
-        #telemetry { bottom: 10px; left: 10px; width: 180px; font-family: monospace; }
+        #main-controls { top: 60px; left: 15px; width: 220px; }
+        #lab-panel { top: 60px; right: 15px; width: 220px; }
+        #telemetry { bottom: 20px; left: 15px; width: 160px; font-size: 0.8em; }
 
-        /* MOBILE OVERRIDES */
+        /* MOBILE SPECIFIC RULES */
         @media (max-width: 768px) {
-            #main-controls { 
-                top: 70px; 
-                left: 5%; 
-                width: 90%; 
-                position: relative; /* Stack in flow if needed, but absolute for now */
+            #mobile-toggle { display: block; }
+            
+            .hud-panel {
+                top: auto !important; bottom: 80px !important; left: 5% !important;
+                width: 90% !important; right: auto !important;
+                transform: translateY(150%); /* Hidden by default */
             }
-            #lab-panel { 
-                top: 10px; 
-                right: 5%; 
-                width: 90%; 
-                position: relative; 
-                margin-top: 10px;
-            }
-            #telemetry {
-                bottom: 10px;
-                left: 5%;
-                width: 90%;
-                display: flex;
-                justify-content: space-around;
-                padding: 8px;
-            }
-            h2 { font-size: 0.9em !important; }
-            .nav-tab { font-size: 0.7em; padding: 5px 10px; }
-            input[type="range"] { height: 10px; }
+
+            .hud-panel.show-mobile { transform: translateY(0); }
+            
+            #telemetry { bottom: 70px; width: 90%; left: 5%; pointer-events: none; }
+            #main-controls { z-index: 1001; }
+            #lab-panel { z-index: 1002; }
         }
 
-        h2 { margin: 0 0 10px 0; font-size: 1em; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #333; padding-bottom: 5px; }
-        label { font-size: 0.65em; text-transform: uppercase; color: #888; display: block; margin: 10px 0 5px; }
+        h2 { margin: 0 0 10px 0; font-size: 0.9em; text-transform: uppercase; color: var(--neon); border-bottom: 1px solid #333; }
+        label { font-size: 0.6em; color: #888; display: block; margin-top: 10px; }
+        select, input, button { width: 100%; background: #050505; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 5px; margin-top: 5px; font-size: 0.8em; }
+        .btn-primary { background: var(--neon); color: #000; border: none; font-weight: bold; cursor: pointer; }
+        .btn-nova { background: #ff416c; border: none; font-weight: bold; }
 
-        select, input, button {
-            width: 100%; background: #0a0a1a; border: 1px solid #333;
-            color: white; padding: 8px; border-radius: 6px; outline: none; font-size: 0.8em;
-        }
-
-        .btn-primary { background: linear-gradient(90deg, #00c6ff 0%, #0072ff 100%); border: none; font-weight: bold; cursor: pointer; }
-        .btn-nova { background: linear-gradient(90deg, #ff4b2b, #ff416c); border: none; font-weight: bold; color: white; cursor: pointer; }
-
+        /* PERSONNEL PORTAL */
         #team-portal {
-            position: fixed;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            width: 85%;
-            max-width: 380px;
-            background: rgba(5, 10, 25, 0.98);
-            border: 2px solid var(--neon);
-            border-radius: 15px;
-            padding: 20px;
-            display: none;
-            z-index: 2000;
-            max-height: 80vh;
-            overflow-y: auto;
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 85%; max-width: 350px; background: #050505; border: 2px solid var(--neon);
+            border-radius: 15px; padding: 20px; display: none; z-index: 2000;
         }
-
-        .team-entry { border-left: 3px solid var(--neon); padding: 5px 12px; margin-bottom: 8px; background: rgba(255, 255, 255, 0.03); font-size: 0.9em; }
+        .team-entry { border-left: 3px solid var(--neon); padding: 5px 10px; margin-bottom: 8px; background: #111; font-size: 0.85em; }
     </style>
 </head>
 <body>
 
 <div id="top-nav">
-    <div id="tab-astro" class="nav-tab active-astro" onclick="switchLab('astro')">🔭 Astronomy</div>
-    <div id="tab-chem" class="nav-tab" onclick="switchLab('chem')">🧪 Chemistry</div>
+    <div id="tab-astro" class="nav-tab active-astro" onclick="switchLab('astro')">Astronomy</div>
+    <div id="tab-chem" class="nav-tab" onclick="switchLab('chem')">Chemistry</div>
 </div>
 
-<div id="ui-container">
-    <div id="main-controls" class="hud-panel">
-        <h2>Mission Control</h2>
-        <label>Focus</label>
-        <select id="cameraTarget" onchange="updateTarget()">
-            <option value="Sun">Sun</option>
-            <option value="Earth">Earth</option>
-            <option value="Jupiter">Jupiter</option>
-        </select>
-        <label>Motion (Slow to Fast)</label>
-        <input type="range" id="dt" min="0.0001" max="0.05" step="0.0001" value="0.005">
-        <button class="btn-primary" style="margin-top:10px" onclick="togglePortal(true)">👥 TEAM</button>
-    </div>
+<button id="mobile-toggle" onclick="toggleMobileUI()">MENU</button>
 
-    <div id="lab-panel" class="hud-panel">
-        <div id="astro-content">
-            <h2 style="color: var(--astro-accent)">Astronomy</h2>
-            <label>Gravity</label>
-            <input type="range" min="1000" max="15000" value="6500" oninput="G = this.value">
-            <button style="margin-top:10px" onclick="location.reload()">Reset</button>
-        </div>
-        <div id="chem-content" style="display:none;">
-            <h2 style="color: var(--chem-accent)">Chemistry</h2>
-            <label>Elements</label>
-            <select onchange="updateStellarColor(this.value)">
-                <option value="0xffcc00">Hydrogen</option>
-                <option value="0x00f2fe">Ionized</option>
-                <option value="0xff4b2b">Red Giant</option>
-            </select>
-            <button class="btn-nova" style="margin-top:10px" onclick="triggerSupernova()">💥 SUPERNOVA</button>
-        </div>
+<div id="main-controls" class="hud-panel">
+    <h2>Control Center</h2>
+    <label>Focus</label>
+    <select id="cameraTarget" onchange="updateTarget()">
+        <option value="Sun">Sun</option>
+        <option value="Earth">Earth</option>
+        <option value="Jupiter">Jupiter</option>
+    </select>
+    <label>Time Flow</label>
+    <input type="range" id="dt" min="0.0001" max="0.05" step="0.0001" value="0.005">
+    <button class="btn-primary" style="margin-top:10px" onclick="togglePortal(true)">TEAM INFO</button>
+</div>
+
+<div id="lab-panel" class="hud-panel">
+    <div id="astro-content">
+        <h2 style="color: var(--astro-accent)">Physics Lab</h2>
+        <label>Gravity</label>
+        <input type="range" min="1000" max="15000" value="6500" oninput="G = this.value">
+        <button style="margin-top:10px" onclick="location.reload()">Reset Sim</button>
+    </div>
+    <div id="chem-content" style="display:none;">
+        <h2 style="color: var(--chem-accent)">Chemistry Lab</h2>
+        <label>Composition</label>
+        <select onchange="updateStellarColor(this.value)">
+            <option value="0xffcc00">Hydrogen</option>
+            <option value="0x00f2fe">Ionized</option>
+        </select>
+        <button class="btn-nova" style="margin-top:10px" onclick="triggerSupernova()">💥 SUPERNOVA</button>
     </div>
 </div>
 
 <div id="telemetry" class="hud-panel">
-    <div id="tel-status">Stable</div>
     <div id="tel-name">Target: Sun</div>
 </div>
 
 <div id="team-portal">
-    <h2 style="text-align: center; color: var(--neon);">Personnel Portal</h2>
-    <div class="team-entry"><span>Lead Developer</span><br><b>Wabi Tafese</b></div>
-    <div class="team-entry"><span>Lead Programmer</span><br><b>Rakeb Tewodros</b></div>
-    <div class="team-entry"><span>Head Researcher</span><br><b>Henok Yared</b></div>
-    <div class="team-entry"><span>Presentation Specialist</span><br><b>Rediet Mebt</b></div>
-    <div class="team-entry"><span>Data Analyst</span><br><b>Aklesiya Negalign</b></div>
-    <div class="team-entry"><span>Research Support</span><br><b>Hemen Tadese</b></div>
-    <div class="team-entry"><span>Project Coordinator</span><br><b>Arsema Laikemariam</b></div>
-    <button class="btn-primary" style="margin-top: 10px;" onclick="togglePortal(false)">CLOSE</button>
+    <h2 style="text-align: center;">Team Portal</h2>
+    <div class="team-entry"><span>Lead Dev:</span> <b>Wabi Tafese</b></div>
+    <div class="team-entry"><span>Programmer:</span> <b>Rakeb Tewodros</b></div>
+    <div class="team-entry"><span>Research:</span> <b>Henok Yared</b></div>
+    <div class="team-entry"><span>Present:</span> <b>Rediet Mebt</b></div>
+    <div class="team-entry"><span>Analyst:</span> <b>Aklesiya Negalign</b></div>
+    <div class="team-entry"><span>Support:</span> <b>Hemen Tadese</b></div>
+    <div class="team-entry"><span>Coord:</span> <b>Arsema Laikemariam</b></div>
+    <button class="btn-primary" onclick="togglePortal(false)">CLOSE</button>
 </div>
 
 <script>
-// Logic remains unchanged to ensure stability
-let scene, camera, renderer, controls;
-let bodies = [], glows = [], targetBody = null;
-let G = 6500, nova = false;
+let scene, camera, renderer, controls, bodies = [], glows = [], targetBody = null, G = 6500, nova = false;
 
 function init() {
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 1, 200000);
-    camera.position.set(0, 2500, 5000);
+    camera.position.set(0, 3000, 6000);
     renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
-    const geo = new THREE.BufferGeometry();
-    const pos = [];
-    for(let i=0; i<10000; i++) pos.push((Math.random()-0.5)*50000, (Math.random()-0.5)*50000, (Math.random()-0.5)*50000);
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({color: 0xffffff, size: 2})));
-
     setupUniverse();
     animate();
 }
 
+function toggleMobileUI() {
+    const panels = document.querySelectorAll('.hud-panel');
+    const btn = document.getElementById('mobile-toggle');
+    panels.forEach(p => p.classList.toggle('show-mobile'));
+    btn.innerText = btn.innerText === "MENU" ? "CLOSE" : "MENU";
+}
+
 function switchLab(type) {
-    const astro = document.getElementById('astro-content');
-    const chem = document.getElementById('chem-content');
-    const tA = document.getElementById('tab-astro');
-    const tC = document.getElementById('tab-chem');
-    if(type === 'astro') {
-        astro.style.display = 'block'; chem.style.display = 'none';
-        tA.className = 'nav-tab active-astro'; tC.className = 'nav-tab';
-    } else {
-        astro.style.display = 'none'; chem.style.display = 'block';
-        tA.className = 'nav-tab'; tC.className = 'nav-tab active-chem';
-    }
+    document.getElementById('astro-content').style.display = type === 'astro' ? 'block' : 'none';
+    document.getElementById('chem-content').style.display = type === 'chem' ? 'block' : 'none';
+    document.getElementById('tab-astro').className = `nav-tab ${type==='astro'?'active-astro':''}`;
+    document.getElementById('tab-chem').className = `nav-tab ${type==='chem'?'active-chem':''}`;
 }
 
 function setupUniverse() {
     const data = [
-        { name: "Sun", m: 4500, d: 0, s: 150, c: 0xffcc00, v: 0 },
-        { name: "Earth", m: 10, d: 1000, s: 25, c: 0x2288ff, v: 6.5 },
-        { name: "Jupiter", m: 200, d: 2200, s: 80, c: 0xffa500, v: 4.2 }
+        { name: "Sun", m: 5000, d: 0, s: 160, c: 0xffcc00, v: 0 },
+        { name: "Earth", m: 10, d: 1200, s: 30, c: 0x2288ff, v: 6.5 },
+        { name: "Jupiter", m: 200, d: 2400, s: 90, c: 0xffa500, v: 4.5 }
     ];
     data.forEach(p => {
-        const mesh = new THREE.Mesh(new THREE.SphereGeometry(p.s, 32, 32), new THREE.MeshPhongMaterial({ color: p.c, emissive: p.name === "Sun" ? p.c : 0, emissiveIntensity: 0.8 }));
-        mesh.position.set(p.d, 0, 0);
-        scene.add(mesh);
-        const glow = new THREE.Mesh(new THREE.SphereGeometry(p.s*1.2, 32, 32), new THREE.MeshBasicMaterial({color: p.c, transparent:true, opacity:0.2, side: THREE.BackSide}));
-        mesh.add(glow);
-        glows.push(glow);
-        bodies.push({ name: p.name, m: p.m, mesh, pos: new THREE.Vector3(p.d, 0, 0), vel: new THREE.Vector3(0, 0, p.v) });
+        const m = new THREE.Mesh(new THREE.SphereGeometry(p.s, 32, 32), new THREE.MeshPhongMaterial({ color: p.c, emissive: p.name==="Sun"?p.c:0 }));
+        m.position.set(p.d, 0, 0);
+        scene.add(m);
+        bodies.push({ name: p.name, m: p.m, mesh: m, pos: new THREE.Vector3(p.d, 0, 0), vel: new THREE.Vector3(0, 0, p.v) });
     });
     targetBody = bodies[0];
     scene.add(new THREE.PointLight(0xffffff, 2, 20000));
@@ -243,10 +192,9 @@ function updateStellarColor(color) {
     const c = parseInt(color);
     bodies[0].mesh.material.color.setHex(c);
     bodies[0].mesh.material.emissive.setHex(c);
-    glows[0].material.color.setHex(c);
 }
 
-function triggerSupernova() { nova = true; document.getElementById('tel-status').innerText = "NOVA DETECTED"; }
+function triggerSupernova() { nova = true; }
 function togglePortal(s) { document.getElementById('team-portal').style.display = s ? 'block' : 'none'; }
 function updateTarget() { targetBody = bodies.find(b => b.name === document.getElementById('cameraTarget').value); }
 
@@ -258,7 +206,7 @@ function animate() {
         bodies.forEach((p2, j) => {
             if(i !== j) {
                 let diff = new THREE.Vector3().subVectors(p2.pos, b.pos);
-                a.add(diff.normalize().multiplyScalar((G * p2.m)/(diff.lengthSq() + 10)));
+                a.add(diff.normalize().multiplyScalar((G * p2.m)/(diff.lengthSq() + 20)));
             }
         });
         b.vel.add(a.multiplyScalar(dt));
@@ -266,8 +214,8 @@ function animate() {
         b.mesh.position.copy(b.pos);
     });
     if(nova) {
-        bodies[0].mesh.scale.addScalar(1);
-        if(bodies[0].mesh.scale.x > 80) location.reload();
+        bodies[0].mesh.scale.addScalar(1.5);
+        if(bodies[0].mesh.scale.x > 100) location.reload();
     }
     if(targetBody) controls.target.lerp(targetBody.pos, 0.1);
     controls.update();
