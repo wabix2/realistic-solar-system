@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Advanced Multi-Lab Simulator</title>
+<title>Advanced 3D Solar System Simulator</title>
 
 <!-- Three.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js"></script>
@@ -17,77 +17,65 @@
 body, html {
     margin:0;
     padding:0;
-    font-family: 'Inter', sans-serif;
-    background-color:#0b0c1b;
+    font-family:'Inter',sans-serif;
     overflow:hidden;
+    background: linear-gradient(180deg,#87ceeb,#fff); /* Bright sky-like gradient */
 }
 
 #navbar {
     position:fixed;
     top:0; left:0; right:0;
     height:60px;
-    background: linear-gradient(90deg,#1f1f3f,#3a3a6e);
+    background: linear-gradient(90deg,#ff6a00,#ffcc00);
     display:flex;
     align-items:center;
     justify-content:space-between;
     padding:0 20px;
     z-index:100;
     color:#fff;
+    font-weight:bold;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
 }
 
 #navbar button {
-    background: #4a4a9e;
-    color:#fff;
+    background: #ffffff;
+    color: #ff6a00;
     border:none;
     padding:8px 15px;
     margin:0 5px;
-    border-radius:5px;
+    border-radius:8px;
     cursor:pointer;
+    font-weight:bold;
     transition:0.2s;
 }
-#navbar button.active {background:#ffaa00;color:#000;}
-
-#aboutTeam {
-    display:none;
-    position:absolute;
-    top:60px; right:20px;
-    background:#1e1e3f;
-    padding:10px 15px;
-    border-radius:8px;
-    border:1px solid #3a3a6e;
-    z-index:101;
+#navbar button.active {
+    background:#ffcc00; color:#000;
 }
-#aboutTeam h3 {margin-top:0;color:#00ffaa;}
-#aboutTeam ul {margin:0;padding:0;list-style:none;color:#fff;}
-#aboutTeam li {margin:5px 0;}
 
-#controlsPanel, #chemPanel {
+#controlsPanel {
     position:absolute;
     top:60px; left:0;
     width:300px;
     bottom:0;
-    background:#1e1e3f;
+    background:#ffe5b4;
     overflow-y:auto;
     padding:15px;
-    border-right:2px solid #3a3a6e;
-    display:none;
+    border-right:2px solid #ff9900;
+    border-radius:0 10px 10px 0;
 }
-#chemPanel {background:#2a1f2a;}
 
-#simCanvas {display:block;width:100%;height:100vh;}
+.control-group {margin-bottom:20px;padding:10px;border:1px solid #ff9900;border-radius:10px;background:#fff2e6;}
+label {color:#ff6600;font-weight:bold;}
+input, button {width:100%;margin-top:5px;padding:8px;border-radius:5px;border:1px solid #ff9900;font-weight:bold;}
 
-.control-group {margin-bottom:20px;padding:10px;border:1px solid #3a3a6e;border-radius:8px;background:#25254d;}
-label {color:#ffcc00;font-weight:bold;}
-input, button {width:100%;margin-top:5px;padding:5px;}
 canvas#energyChart {width:100%!important;height:150px!important;margin-top:10px;}
-
 .planet-label {
-    color:#fff;
-    font-size:12px;
+    color:#000;
+    font-size:14px;
     font-weight:bold;
     position:absolute;
     pointer-events:none;
-    text-shadow: 1px 1px 2px #000;
+    text-shadow:1px 1px 2px #fff;
 }
 </style>
 </head>
@@ -97,7 +85,6 @@ canvas#energyChart {width:100%!important;height:150px!important;margin-top:10px;
 <div id="navbar">
     <div>
         <button id="astroBtn" class="active">Astronomy Lab</button>
-        <button id="chemBtn">Chemistry Lab</button>
         <button id="aboutBtn">About Team</button>
     </div>
     <div>
@@ -105,10 +92,10 @@ canvas#energyChart {width:100%!important;height:150px!important;margin-top:10px;
     </div>
 </div>
 
-<!-- About Team Dropdown -->
-<div id="aboutTeam">
-    <h3>Team Members & Roles</h3>
-    <ul>
+<!-- About Team -->
+<div id="aboutTeam" style="display:none;position:absolute;top:60px;right:20px;background:#fff2e6;padding:10px;border:1px solid #ff9900;border-radius:8px;z-index:101;">
+    <h3 style="margin-top:0;color:#ff6600;">Team Members & Roles</h3>
+    <ul style="list-style:none;padding:0;color:#000;">
         <li>Wabi – Team Leader & Programmer</li>
         <li>Henok Yared – Researcher</li>
         <li>Rediet – Research & Presentation</li>
@@ -119,7 +106,7 @@ canvas#energyChart {width:100%!important;height:150px!important;margin-top:10px;
     </ul>
 </div>
 
-<!-- Astronomy Controls -->
+<!-- Controls Panel -->
 <div id="controlsPanel">
     <div class="control-group">
         <label>Simulation Speed (Δt)</label>
@@ -138,16 +125,6 @@ canvas#energyChart {width:100%!important;height:150px!important;margin-top:10px;
     </div>
 </div>
 
-<!-- Chemistry Panel -->
-<div id="chemPanel">
-    <div class="control-group">
-        <label>Type Reaction:</label>
-        <input type="text" id="reactionInput" placeholder="e.g., H2 + O2 → H2O">
-        <button id="runReaction">Run Reaction</button>
-    </div>
-    <div id="reactionOutput"></div>
-</div>
-
 <!-- WebGL Canvas -->
 <canvas id="simCanvas"></canvas>
 
@@ -155,127 +132,114 @@ canvas#energyChart {width:100%!important;height:150px!important;margin-top:10px;
 // =====================
 // Navbar Logic
 // =====================
-const astroBtn = document.getElementById('astroBtn');
-const chemBtn = document.getElementById('chemBtn');
-const aboutBtn = document.getElementById('aboutBtn');
-const controlsPanel = document.getElementById('controlsPanel');
-const chemPanel = document.getElementById('chemPanel');
-const aboutTeam = document.getElementById('aboutTeam');
-
-astroBtn.onclick = () => {
-    astroBtn.classList.add('active'); chemBtn.classList.remove('active');
-    controlsPanel.style.display='block'; chemPanel.style.display='none';
-}
-chemBtn.onclick = () => {
-    chemBtn.classList.add('active'); astroBtn.classList.remove('active');
-    controlsPanel.style.display='none'; chemPanel.style.display='block';
-}
-aboutBtn.onclick = () => { aboutTeam.style.display = aboutTeam.style.display==='none'?'block':'none'; }
+const aboutBtn=document.getElementById('aboutBtn');
+const aboutTeam=document.getElementById('aboutTeam');
+aboutBtn.onclick=()=>{aboutTeam.style.display=aboutTeam.style.display==='none'?'block':'none';}
 
 // =====================
-// Three.js Scene Setup
+// Three.js Setup
 // =====================
-let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1e7);
+let scene=new THREE.Scene();
+let camera=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,1e7);
 camera.position.set(0,300,600);
 
-let renderer = new THREE.WebGLRenderer({canvas:document.getElementById('simCanvas'),antialias:true});
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setClearColor(0x000010);
+let renderer=new THREE.WebGLRenderer({canvas:document.getElementById('simCanvas'),antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
 
-let controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
+let controls=new THREE.OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
 
-// Galaxy background
-let loader = new THREE.TextureLoader();
-loader.load('https://i.ibb.co/vJ1DFbn/galaxy-bg.jpg', function(texture){
-    scene.background = texture;
-});
+// Background stars
+let loader=new THREE.TextureLoader();
+loader.load('https://i.ibb.co/vJ1DFbn/galaxy-bg.jpg',texture=>scene.background=texture);
 
 // Lighting
-scene.add(new THREE.AmbientLight(0x888888));
-let pointLight = new THREE.PointLight(0xffffff,1,0); pointLight.position.set(0,0,0); scene.add(pointLight);
+scene.add(new THREE.AmbientLight(0xffffff,0.6));
+let sunLight=new THREE.PointLight(0xffffff,1,0); sunLight.position.set(0,0,0); scene.add(sunLight);
 
 // =====================
-// Solar System Data
+// Solar System
 // =====================
-const AU = 1.496e8;
-const scale = 0.0007;
+const AU=1.496e8; 
+const scale=0.0008;
 
-const planetsData = [
-    {name:'Mercury', radius:2440, distance:0.387*AU, period:88, color:0xaaaaaa},
-    {name:'Venus', radius:6052, distance:0.723*AU, period:225, color:0xffcc88},
-    {name:'Earth', radius:6371, distance:1*AU, period:365, color:0x3399ff},
-    {name:'Mars', radius:3390, distance:1.524*AU, period:687, color:0xff6633},
-    {name:'Jupiter', radius:69911, distance:5.203*AU, period:4333, color:0xffaa00},
-    {name:'Saturn', radius:58232, distance:9.537*AU, period:10759, color:0xffdd88},
-    {name:'Uranus', radius:25362, distance:19.191*AU, period:30687, color:0x66ccff},
-    {name:'Neptune', radius:24622, distance:30.07*AU, period:60190, color:0x3366ff}
+const planetsData=[
+{name:'Mercury',radius:2440,distance:0.387*AU,period:88,color:0xaaaaaa},
+{name:'Venus',radius:6052,distance:0.723*AU,period:225,color:0xffcc88},
+{name:'Earth',radius:6371,distance:1*AU,period:365,color:0x3399ff},
+{name:'Mars',radius:3390,distance:1.524*AU,period:687,color:0xff6633},
+{name:'Jupiter',radius:69911,distance:5.203*AU,period:4333,color:0xffaa00},
+{name:'Saturn',radius:58232,distance:9.537*AU,period:10759,color:0xffdd88},
+{name:'Uranus',radius:25362,distance:19.191*AU,period:30687,color:0x66ccff},
+{name:'Neptune',radius:24622,distance:30.07*AU,period:60190,color:0x3366ff}
 ];
 
-// Sun
-let sunMesh = new THREE.Mesh(new THREE.SphereGeometry(69634*scale,32,32),
-                             new THREE.MeshBasicMaterial({color:0xffcc00}));
+let sunMesh=new THREE.Mesh(new THREE.SphereGeometry(69634*scale,32,32),
+                           new THREE.MeshBasicMaterial({color:0xffcc00}));
 scene.add(sunMesh);
 
-// Planet meshes
 let planetObjects=[],planetLabels=[];
 planetsData.forEach(p=>{
-    let geom = new THREE.SphereGeometry(p.radius*scale*15,32,32);
-    let mat = new THREE.MeshStandardMaterial({color:p.color});
-    let mesh = new THREE.Mesh(geom,mat);
+    let geom=new THREE.SphereGeometry(p.radius*scale*15,32,32);
+    let mat=new THREE.MeshStandardMaterial({color:p.color});
+    let mesh=new THREE.Mesh(geom,mat);
     let angle=Math.random()*Math.PI*2;
     mesh.position.set(p.distance*scale*Math.cos(angle),0,p.distance*scale*Math.sin(angle));
     scene.add(mesh);
-    planetObjects.push({name:p.name, mass:p.radius*1e3, pos:mesh.position.clone(), vel:new THREE.Vector3(-Math.sin(angle)*30,0,Math.cos(angle)*30), mesh:mesh});
+    planetObjects.push({name:p.name,mass:p.radius*1e3,pos:mesh.position.clone(),vel:new THREE.Vector3(-Math.sin(angle)*30,0,Math.cos(angle)*30),mesh:mesh,trails:[]});
     
-    // Planet label
-    let label = document.createElement('div');
-    label.className='planet-label';
-    label.innerText=p.name;
-    document.body.appendChild(label);
+    // Labels
+    let label=document.createElement('div');
+    label.className='planet-label'; label.innerText=p.name; document.body.appendChild(label);
     planetLabels.push(label);
 });
 
 // =====================
 // RK4 Physics
 // =====================
-const G = 6.6743e-11;
+const G=6.6743e-11;
 let deltaT=parseFloat(document.getElementById('timeStep').value);
-document.getElementById('timeStep').oninput=(e)=>{deltaT=parseFloat(e.target.value);}
+document.getElementById('timeStep').oninput=e=>{deltaT=parseFloat(e.target.value);}
 
-// Energy chart
-let energyChartCtx = document.getElementById('energyChart').getContext('2d');
-let energyChart = new Chart(energyChartCtx,{type:'line',data:{labels:[],datasets:[{label:'Total Energy',data:[],borderColor:'#00ffcc',fill:false}]},options:{responsive:true,animation:false}});
-
-// Gravity acceleration
 function computeAcceleration(i){
-    let acc = new THREE.Vector3(0,0,0);
-    let pos_i = planetObjects[i].pos;
+    let acc=new THREE.Vector3(0,0,0);
+    let pos_i=planetObjects[i].pos;
     planetObjects.forEach((q,j)=>{
         if(i===j) return;
-        let r = new THREE.Vector3().subVectors(q.pos,pos_i);
-        let distSq = r.lengthSq()+1e3;
+        let r=new THREE.Vector3().subVectors(q.pos,pos_i);
+        let distSq=r.lengthSq()+1e3;
         acc.add(r.multiplyScalar(G*q.mass/Math.pow(distSq,1.5)));
     });
     return acc;
 }
 
-// RK4 Step
 function rk4Step(){
-    let n=planetObjects.length;
-    let pos=planetObjects.map(o=>o.pos.clone());
-    let vel=planetObjects.map(o=>o.vel.clone());
-    
-    let k1v=[],k1p=[];
-    for(let i=0;i<n;i++){k1v.push(computeAcceleration(i)); k1p.push(vel[i].clone());}
-    
-    for(let i=0;i<n;i++){
-        planetObjects[i].pos.add(k1p[i].clone().multiplyScalar(deltaT));
-        planetObjects[i].vel.add(k1v[i].clone().multiplyScalar(deltaT));
-        planetObjects[i].mesh.position.copy(planetObjects[i].pos);
-    }
+    planetObjects.forEach((p,i)=>{
+        let k1v=computeAcceleration(i).clone();
+        let k1p=p.vel.clone();
+        p.vel.add(k1v.clone().multiplyScalar(deltaT));
+        p.pos.add(k1p.clone().multiplyScalar(deltaT));
+        p.mesh.position.copy(p.pos);
+        // Trail
+        p.trails.push(p.pos.clone());
+        if(p.trails.length>200)p.trails.shift();
+    });
 }
+
+// =====================
+// Orbit Trails Toggle
+// =====================
+let trailsOn=true;
+document.getElementById('trailBtn').onclick=()=>{
+    trailsOn=!trailsOn;
+    document.getElementById('trailBtn').innerText=trailsOn?'ON':'OFF';
+}
+
+// =====================
+// Energy Chart
+// =====================
+let energyChartCtx=document.getElementById('energyChart').getContext('2d');
+let energyChart=new Chart(energyChartCtx,{type:'line',data:{labels:[],datasets:[{label:'Total Energy',data:[],borderColor:'#ff6600',fill:false}]},options:{responsive:true,animation:false}});
 
 // =====================
 // Animation
@@ -286,39 +250,15 @@ function animate(){
     controls.update();
     renderer.render(scene,camera);
     
-    // Update labels
+    // Labels
     planetObjects.forEach((p,i)=>{
-        let vector = p.pos.clone().project(camera);
-        let x = (vector.x*0.5+0.5)*window.innerWidth;
-        let y = (-vector.y*0.5+0.5)*window.innerHeight;
+        let vector=p.pos.clone().project(camera);
+        let x=(vector.x*0.5+0.5)*window.innerWidth;
+        let y=(-vector.y*0.5+0.5)*window.innerHeight;
         planetLabels[i].style.transform=`translate(${x}px,${y}px)`;
     });
 }
 animate();
-
-// =====================
-// Chemistry Lab
-// =====================
-const runReactionBtn=document.getElementById('runReaction');
-const reactionInput=document.getElementById('reactionInput');
-const reactionOutput=document.getElementById('reactionOutput');
-runReactionBtn.onclick=()=>{
-    let reaction=reactionInput.value.trim();
-    if(!reaction){reactionOutput.innerHTML="<p style='color:#ff0000;'>Enter a valid reaction!</p>"; return;}
-    reactionOutput.innerHTML=`<p style='color:#00ffcc;'>Reaction: ${reaction}</p>`;
-    for(let i=0;i<30;i++){
-        let div=document.createElement('div');
-        div.style.width='12px'; div.style.height='12px';
-        div.style.borderRadius='50%';
-        div.style.background=['#ff0000','#00ff00','#0000ff','#ffaa00'][Math.floor(Math.random()*4)];
-        div.style.position='absolute';
-        div.style.left=Math.random()*window.innerWidth+'px';
-        div.style.top=Math.random()*window.innerHeight+'px';
-        div.style.opacity='0.8';
-        document.body.appendChild(div);
-        setTimeout(()=>div.remove(),2000);
-    }
-}
 
 // =====================
 // CSV Export
@@ -328,8 +268,8 @@ document.getElementById('exportCSV').onclick=()=>{
     planetObjects.forEach(p=>{
         csv+=`${p.name},${p.pos.x},${p.pos.y},${p.pos.z},${p.vel.x},${p.vel.y},${p.vel.z}\n`;
     });
-    let blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-    saveAs(blob,"simulation.csv");
+    let blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+    saveAs(blob,"solar_system.csv");
 }
 
 // =====================
@@ -341,5 +281,6 @@ window.addEventListener('resize',()=>{
     renderer.setSize(window.innerWidth,window.innerHeight);
 });
 </script>
+
 </body>
 </html>
