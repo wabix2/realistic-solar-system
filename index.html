@@ -7,29 +7,50 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <style>
-body { margin:0; overflow:hidden; font-family:Arial; background:#000; }
+body {
+margin:0;
+overflow:hidden;
+font-family:Arial;
+background: radial-gradient(circle at center, #0b1a40, #000010);
+}
 
 #panel{
 position:absolute;
 top:10px;
 left:10px;
 width:340px;
-background:rgba(10,10,30,0.9);
+background:rgba(10,10,35,0.92);
 color:white;
 padding:15px;
-border-radius:10px;
+border-radius:12px;
 font-size:14px;
 max-height:95vh;
 overflow:auto;
+box-shadow:0 0 15px rgba(0,255,255,0.2);
 }
 
 button,input,select{
 width:100%;
 margin-top:6px;
 padding:6px;
+border-radius:6px;
+border:none;
 }
 
 h3 { margin-top:15px; }
+
+.collapsible{
+cursor:pointer;
+background:#111a40;
+padding:8px;
+margin-top:10px;
+border-radius:6px;
+}
+
+.content{
+display:none;
+margin-top:8px;
+}
 </style>
 </head>
 
@@ -48,6 +69,7 @@ Initial dt:
 <input type="number" id="dt" value="0.01" step="0.001">
 
 <button onclick="loadSystem()">Load 20 Bodies</button>
+<button onclick="resetSystem()">Reset Simulation</button>
 <button onclick="exportCSV()">Export CSV</button>
 <button onclick="generateReport()">Generate Lab Report</button>
 
@@ -59,7 +81,15 @@ Energy: <span id="energy">0</span>
 
 <hr>
 
-<h3>About Team</h3>
+<h3>Orbit Analytics</h3>
+Center of Mass: <span id="com">0</span><br>
+Total Momentum: <span id="momentum">0</span><br>
+Stability: <span id="stability">Stable</span>
+
+<hr>
+
+<div class="collapsible" onclick="toggleAbout()">About Team ▼</div>
+<div class="content" id="aboutSection">
 <p><b>Wabi</b> – Team Leader & Programmer</p>
 <p><b>Rakeb Tewodros</b> – Programmer</p>
 <p><b>Henok Yared</b> – Researcher</p>
@@ -67,35 +97,25 @@ Energy: <span id="energy">0</span>
 <p><b>Aklesiya Negalign</b> – Researcher</p>
 <p><b>Hemen Tadese</b> – Research Support</p>
 <p><b>Arsema</b> – Assistant Project Coordinator</p>
+</div>
 
 </div>
 
 <script>
-/* ============================
-   BASIC 3D SETUP
-============================ */
-
-let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 5000);
-let renderer = new THREE.WebGLRenderer({antialias:true});
-renderer.setSize(window.innerWidth, window.innerHeight);
+let scene=new THREE.Scene();
+let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,5000);
+let renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
 document.body.appendChild(renderer.domElement);
-
-camera.position.z = 800;
+camera.position.z=800;
 
 window.addEventListener("resize",()=>{
-camera.aspect = window.innerWidth/window.innerHeight;
+camera.aspect=window.innerWidth/window.innerHeight;
 camera.updateProjectionMatrix();
 renderer.setSize(window.innerWidth,window.innerHeight);
 });
 
-/* ============================
-   PHYSICS ENGINE
-============================ */
-
-let bodies=[];
-let meshes=[];
-let history=[];
+let bodies=[],meshes=[],history=[];
 let G=500;
 
 class Body{
@@ -121,16 +141,11 @@ bodies[i].acc=acc;
 }
 }
 
-/* TRUE RK4 */
 function rk4Step(dt){
-
-let original=bodies.map(b=>({
-pos:b.pos.clone(),
-vel:b.vel.clone()
-}));
+let original=bodies.map(b=>({pos:b.pos.clone(),vel:b.vel.clone()}));
 
 computeAccelerations();
-let k1=bodies.map(b=>({v:b.vel.clone(), a:b.acc.clone()}));
+let k1=bodies.map(b=>({v:b.vel.clone(),a:b.acc.clone()}));
 
 for(let i=0;i<bodies.length;i++){
 bodies[i].pos=original[i].pos.clone().add(k1[i].v.clone().multiplyScalar(dt/2));
@@ -138,7 +153,7 @@ bodies[i].vel=original[i].vel.clone().add(k1[i].a.clone().multiplyScalar(dt/2));
 }
 
 computeAccelerations();
-let k2=bodies.map(b=>({v:b.vel.clone(), a:b.acc.clone()}));
+let k2=bodies.map(b=>({v:b.vel.clone(),a:b.acc.clone()}));
 
 for(let i=0;i<bodies.length;i++){
 bodies[i].pos=original[i].pos.clone().add(k2[i].v.clone().multiplyScalar(dt/2));
@@ -146,7 +161,7 @@ bodies[i].vel=original[i].vel.clone().add(k2[i].a.clone().multiplyScalar(dt/2));
 }
 
 computeAccelerations();
-let k3=bodies.map(b=>({v:b.vel.clone(), a:b.acc.clone()}));
+let k3=bodies.map(b=>({v:b.vel.clone(),a:b.acc.clone()}));
 
 for(let i=0;i<bodies.length;i++){
 bodies[i].pos=original[i].pos.clone().add(k3[i].v.clone().multiplyScalar(dt));
@@ -154,17 +169,16 @@ bodies[i].vel=original[i].vel.clone().add(k3[i].a.clone().multiplyScalar(dt));
 }
 
 computeAccelerations();
-let k4=bodies.map(b=>({v:b.vel.clone(), a:b.acc.clone()}));
+let k4=bodies.map(b=>({v:b.vel.clone(),a:b.acc.clone()}));
 
 for(let i=0;i<bodies.length;i++){
-
-let dp = k1[i].v.clone()
+let dp=k1[i].v.clone()
 .add(k2[i].v.clone().multiplyScalar(2))
 .add(k3[i].v.clone().multiplyScalar(2))
 .add(k4[i].v.clone())
 .multiplyScalar(dt/6);
 
-let dv = k1[i].a.clone()
+let dv=k1[i].a.clone()
 .add(k2[i].a.clone().multiplyScalar(2))
 .add(k3[i].a.clone().multiplyScalar(2))
 .add(k4[i].a.clone())
@@ -172,14 +186,6 @@ let dv = k1[i].a.clone()
 
 bodies[i].pos=original[i].pos.clone().add(dp);
 bodies[i].vel=original[i].vel.clone().add(dv);
-}
-}
-
-function eulerStep(dt){
-computeAccelerations();
-for(let b of bodies){
-b.vel.add(b.acc.clone().multiplyScalar(dt));
-b.pos.add(b.vel.clone().multiplyScalar(dt));
 }
 }
 
@@ -197,47 +203,56 @@ document.getElementById("energy").innerText=total.toFixed(2);
 return total;
 }
 
-/* ============================
-   SYSTEM LOADER
-============================ */
+function calculateAnalytics(){
+let com=new THREE.Vector3();
+let totalMass=0;
+let momentum=0;
+
+for(let b of bodies){
+com.add(b.pos.clone().multiplyScalar(b.m));
+totalMass+=b.m;
+momentum+=b.m*b.vel.length();
+}
+
+com.divideScalar(totalMass);
+document.getElementById("com").innerText=
+`${com.x.toFixed(1)}, ${com.y.toFixed(1)}, ${com.z.toFixed(1)}`;
+document.getElementById("momentum").innerText=momentum.toFixed(2);
+
+let energy=calculateEnergy();
+document.getElementById("stability").innerText=
+Math.abs(energy)<1e8?"Stable":"Unstable";
+}
 
 function loadSystem(){
-
 for(let mesh of meshes) scene.remove(mesh);
-
-bodies=[];
-meshes=[];
-history=[];
-
+bodies=[]; meshes=[]; history=[];
 for(let i=0;i<20;i++){
-let b=new Body(
-Math.random()*50+10,
+let mass=Math.random()*50+10;
+let b=new Body(mass,
 Math.random()*400-200,
 Math.random()*400-200,
 Math.random()*400-200,
 Math.random()*2-1,
 Math.random()*2-1,
-Math.random()*2-1
-);
-
+Math.random()*2-1);
 bodies.push(b);
 
-let geometry=new THREE.SphereGeometry(8);
+let geometry=new THREE.SphereGeometry(5+mass/10);
 let material=new THREE.MeshBasicMaterial({color:Math.random()*0xffffff});
 let mesh=new THREE.Mesh(geometry,material);
-
 scene.add(mesh);
 meshes.push(mesh);
 }
-
 document.getElementById("count").innerText=bodies.length;
 }
 
-loadSystem();
+function resetSystem(){ loadSystem(); }
 
-/* ============================
-   EXPORT
-============================ */
+function toggleAbout(){
+let sec=document.getElementById("aboutSection");
+sec.style.display=sec.style.display==="block"?"none":"block";
+}
 
 function exportCSV(){
 let csv="time,body,x,y,z\n";
@@ -255,9 +270,10 @@ let text=
 
 Bodies: ${bodies.length}
 Integrator: ${document.getElementById("method").value}
-Final Energy: ${calculateEnergy()}
+Energy: ${calculateEnergy()}
 
-This simulation demonstrates 3D N-body gravitational dynamics using a full RK4 implementation.
+Center of Mass: ${document.getElementById("com").innerText}
+Momentum: ${document.getElementById("momentum").innerText}
 `;
 
 let blob=new Blob([text],{type:"text/plain"});
@@ -267,27 +283,17 @@ a.download="lab_report.txt";
 a.click();
 }
 
-/* ============================
-   ANIMATION
-============================ */
-
 let last=0,frames=0;
-
 function animate(time){
-
 let dt=parseFloat(document.getElementById("dt").value);
-let method=document.getElementById("method").value;
-
-if(method==="rk4") rk4Step(dt);
-else eulerStep(dt);
+rk4Step(dt);
 
 for(let i=0;i<bodies.length;i++){
 meshes[i].position.copy(bodies[i].pos);
 history.push([time,i,bodies[i].pos.x,bodies[i].pos.y,bodies[i].pos.z]);
 }
 
-calculateEnergy();
-
+calculateAnalytics();
 renderer.render(scene,camera);
 
 frames++;
@@ -296,10 +302,9 @@ document.getElementById("fps").innerText=frames;
 frames=0;
 last=time;
 }
-
 requestAnimationFrame(animate);
 }
-
+loadSystem();
 requestAnimationFrame(animate);
 </script>
 </body>
