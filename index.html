@@ -50,6 +50,42 @@
         }
         .btn-primary:hover { filter: brightness(1.3); transform: scale(1.02); }
 
+        .btn-tech {
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid var(--neon);
+            color: var(--neon);
+            margin-top: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        .btn-tech:hover { background: var(--neon); color: #000; }
+
+        /* TECH STYLE ABOUT SECTION */
+        #team-portal {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 380px;
+            background: rgba(5, 10, 25, 0.95);
+            backdrop-filter: blur(25px);
+            border: 2px solid var(--neon);
+            border-radius: 20px;
+            padding: 30px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 0 50px rgba(0, 242, 254, 0.4);
+        }
+
+        .team-entry {
+            border-left: 3px solid var(--neon);
+            padding: 8px 15px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 0 10px 10px 0;
+        }
+        .team-role { font-size: 0.65em; color: var(--neon); text-transform: uppercase; letter-spacing: 1px; display: block; }
+        .team-name { font-weight: bold; font-size: 1.1em; letter-spacing: 0.5px; }
+
         .pilot-keys { display: inline-block; background: #333; padding: 2px 6px; border-radius: 4px; color: var(--neon); margin: 0 2px; }
 
         details { font-size: 0.8em; margin-top: 15px; border-top: 1px solid #222; padding-top: 10px; }
@@ -88,14 +124,28 @@
         <input type="range" id="dt" min="0" max="0.1" step="0.001" value="0.015" oninput="timeScale=1">
     </div>
 
+    <button class="btn-tech" onclick="togglePortal(true)">👥 ABOUT THE TEAM</button>
     <button class="btn-primary" onclick="location.reload()">Reset Universe</button>
 
     <details>
         <summary>System Manifest</summary>
         <p>Integrator: <b>RK4 (Runge-Kutta)</b></p>
         <p>Entities: <b>3,510</b> (Planets + Asteroids)</p>
-        <p>Lead: <b>Wabi</b> & The Lab Team</p>
     </details>
+</div>
+
+<div id="team-portal">
+    <h2 style="text-align: center; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px;">Personnel Portal</h2>
+    
+    <div class="team-entry"><span class="team-role">Lead Developer</span><span class="team-name">Wabi</span></div>
+    <div class="team-entry"><span class="team-role">Lead Programmer</span><span class="team-name">Rakeb Tewodros</span></div>
+    <div class="team-entry"><span class="team-role">Head Researcher</span><span class="team-name">Henok Yared</span></div>
+    <div class="team-entry"><span class="team-role">Presentation Specialist</span><span class="team-name">Rediet</span></div>
+    <div class="team-entry"><span class="team-role">Data Analyst</span><span class="team-name">Aklesiya Negalign</span></div>
+    <div class="team-entry"><span class="team-role">Research Support</span><span class="team-name">Hemen Tadese</span></div>
+    <div class="team-entry"><span class="team-role">Project Coordinator</span><span class="team-name">Arsema</span></div>
+
+    <button class="btn-primary" style="margin-top: 15px;" onclick="togglePortal(false)">CLOSE PORTAL</button>
 </div>
 
 <div id="telemetry" class="hud-panel">
@@ -122,9 +172,7 @@ let targetBody = null, isPilot = false;
 let timeScale = 1, G = 6500;
 let keys = {};
 
-// Pilot velocities
 let moveVel = new THREE.Vector3();
-let lookRot = new THREE.Euler(0, 0, 0, 'YXZ');
 
 function init() {
     scene = new THREE.Scene();
@@ -155,11 +203,11 @@ function init() {
     });
 }
 
-/* ============================
-   VISUAL ASSETS
-============================ */
+function togglePortal(show) {
+    document.getElementById('team-portal').style.display = show ? 'block' : 'none';
+}
+
 function createMilkyWay() {
-    // Star core
     const geo = new THREE.BufferGeometry();
     const pos = [];
     for(let i=0; i<30000; i++) {
@@ -179,7 +227,6 @@ function createLabel(name, color) {
     ctx.fillStyle = color;
     ctx.shadowBlur = 10; ctx.shadowColor = color;
     ctx.fillText(name.toUpperCase(), 10, 45);
-    
     const tex = new THREE.CanvasTexture(canvas);
     const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
     sprite.scale.set(120, 30, 1);
@@ -202,35 +249,23 @@ function setupUniverse() {
     solarData.forEach(p => {
         const mesh = new THREE.Mesh(
             new THREE.SphereGeometry(p.s, 48, 48),
-            new THREE.MeshPhongMaterial({ 
-                color: p.c, 
-                emissive: p.name === "Sun" ? p.c : 0x000000,
-                emissiveIntensity: 0.8 
-            })
+            new THREE.MeshPhongMaterial({ color: p.c, emissive: p.name === "Sun" ? p.c : 0x000000, emissiveIntensity: 0.8 })
         );
         mesh.position.set(p.d, 0, 0);
         scene.add(mesh);
-
-        // Atmosphere
         if(p.name !== "Sun") {
             const glow = new THREE.Mesh(new THREE.SphereGeometry(p.s*1.2, 32, 32), new THREE.MeshBasicMaterial({color: p.c, transparent:true, opacity:0.1, side: THREE.BackSide}));
             mesh.add(glow);
         }
-
-        // Label
         const label = createLabel(p.name, "#" + p.c.toString(16).padStart(6, '0'));
         scene.add(label);
-
         bodies.push({ name: p.name, m: p.m, mesh, label, pos: new THREE.Vector3(p.d, 0, 0), vel: new THREE.Vector3(0, 0, p.v) });
         meshes.push(mesh);
-
         const trail = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({color: p.c, transparent:true, opacity:0.2}));
         trail.userData = { pts: [] };
         trails.push(trail);
         scene.add(trail);
     });
-
-    // Asteroid Belt
     const astGeo = new THREE.BufferGeometry();
     const astPos = [];
     for(let i=0; i<3500; i++) {
@@ -240,14 +275,10 @@ function setupUniverse() {
     }
     astGeo.setAttribute('position', new THREE.Float32BufferAttribute(astPos, 3));
     scene.add(new THREE.Points(astGeo, new THREE.PointsMaterial({color: 0x777777, size: 1.5})));
-
     scene.add(new THREE.PointLight(0xffffff, 2.5, 20000));
     scene.add(new THREE.AmbientLight(0x222233));
 }
 
-/* ============================
-   PHYSICS ENGINE (RK4)
-============================ */
 function stepRK4(dt) {
     if(dt === 0) return;
     const calcA = (ps) => ps.map((p, i) => {
@@ -261,35 +292,25 @@ function stepRK4(dt) {
         });
         return a;
     });
-
     let p0 = bodies.map(b => b.pos.clone());
     let v0 = bodies.map(b => b.vel.clone());
-
-    let a1 = calcA(p0);
-    let kv1 = a1.map(a => a.multiplyScalar(dt));
+    let kv1 = calcA(p0).map(a => a.multiplyScalar(dt));
     let kp1 = v0.map(v => v.clone().multiplyScalar(dt));
-
     let p1 = p0.map((p, i) => p.clone().add(kp1[i].clone().multiplyScalar(0.5)));
     let kv2 = calcA(p1).map(a => a.multiplyScalar(dt));
     let kp2 = v0.map((v, i) => v.clone().add(kv1[i].clone().multiplyScalar(0.5)).multiplyScalar(dt));
-
     let p2 = p0.map((p, i) => p.clone().add(kp2[i].clone().multiplyScalar(0.5)));
     let kv3 = calcA(p2).map(a => a.multiplyScalar(dt));
     let kp3 = v0.map((v, i) => v.clone().add(kv2[i].clone().multiplyScalar(0.5)).multiplyScalar(dt));
-
     let p3 = p0.map((p, i) => p.clone().add(kp3[i]));
     let kv4 = calcA(p3).map(a => a.multiplyScalar(dt));
     let kp4 = v0.map((v, i) => v.clone().add(kv3[i]).multiplyScalar(dt));
-
     bodies.forEach((b, i) => {
         b.vel.add(kv1[i].add(kv2[i].multiplyScalar(2)).add(kv3[i].multiplyScalar(2)).add(kv4[i]).multiplyScalar(1/6));
         b.pos.add(kp1[i].add(kp2[i].multiplyScalar(2)).add(kp3[i].multiplyScalar(2)).add(kp4[i]).multiplyScalar(1/6));
     });
 }
 
-/* ============================
-   PILOT & NAVIGATION
-============================ */
 function toggleFlightMode() {
     isPilot = (document.getElementById('navMode').value === 'pilot');
     controls.enabled = !isPilot;
@@ -299,28 +320,15 @@ function toggleFlightMode() {
 
 function updatePilot() {
     if(!isPilot) return;
-    
     const speed = keys['ShiftLeft'] ? 15 : 5;
-    const rotSpeed = 0.02;
-
-    if(keys['KeyW']) moveVel.z = -speed;
-    else if(keys['KeyS']) moveVel.z = speed;
-    else moveVel.z *= 0.9;
-
-    if(keys['KeyA']) moveVel.x = -speed;
-    else if(keys['KeyD']) moveVel.x = speed;
-    else moveVel.x *= 0.9;
-
-    if(keys['Space']) moveVel.y = speed;
-    else if(keys['ControlLeft']) moveVel.y = -speed;
-    else moveVel.y *= 0.9;
-
-    if(keys['KeyQ']) camera.rotation.z += rotSpeed;
-    if(keys['KeyE']) camera.rotation.z -= rotSpeed;
-
-    camera.translateX(moveVel.x);
-    camera.translateY(moveVel.y);
-    camera.translateZ(moveVel.z);
+    if(keys['KeyW']) camera.translateZ(-speed);
+    if(keys['KeyS']) camera.translateZ(speed);
+    if(keys['KeyA']) camera.translateX(-speed);
+    if(keys['KeyD']) camera.translateX(speed);
+    if(keys['Space']) camera.translateY(speed);
+    if(keys['ControlLeft']) camera.translateY(-speed);
+    if(keys['KeyQ']) camera.rotation.z += 0.02;
+    if(keys['KeyE']) camera.rotation.z -= 0.02;
 }
 
 function updateTarget() {
@@ -340,22 +348,14 @@ function onPlanetClick(e) {
     }
 }
 
-/* ============================
-   MAIN LOOP
-============================ */
 let lastT = 0, fCount = 0;
 function animate(t) {
     requestAnimationFrame(animate);
-    
     const dt = parseFloat(document.getElementById('dt').value) * timeScale;
     stepRK4(dt);
-
     bodies.forEach((b, i) => {
         b.mesh.position.copy(b.pos);
-        // Position Label above planet
         b.label.position.copy(b.pos).add(new THREE.Vector3(0, b.mesh.geometry.parameters.radius + 30, 0));
-        
-        // Update Trails
         if(dt > 0) {
             let pts = trails[i].userData.pts;
             pts.push(b.pos.clone());
@@ -363,7 +363,6 @@ function animate(t) {
             trails[i].geometry.setFromPoints(pts);
         }
     });
-
     if(isPilot) updatePilot();
     else if(targetBody) {
         controls.target.lerp(targetBody.pos, 0.1);
@@ -371,10 +370,8 @@ function animate(t) {
         document.getElementById('tel-speed').innerText = (targetBody.vel.length() * 100).toFixed(0) + " km/h";
         document.getElementById('tel-dist').innerText = (targetBody.pos.distanceTo(bodies[0].pos) / 100).toFixed(2) + " AU";
     }
-
     controls.update();
     renderer.render(scene, camera);
-
     fCount++;
     if(t - lastT > 1000) { document.getElementById('fps').innerText = fCount; fCount=0; lastT=t; }
 }
