@@ -2,91 +2,125 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Planetary RK4 Simulation</title>
+<title>Planetary RK4 Simulation Lab</title>
+
 <style>
-body {
-    margin:0;
-    overflow:hidden;
-    font-family: Arial, sans-serif;
-    background: linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1c1c2b);
-    background-size:400% 400%;
-    animation: gradient 15s ease infinite;
-}
-@keyframes gradient {
-    0%{background-position:0% 50%}
-    50%{background-position:100% 50%}
-    100%{background-position:0% 50%}
-}
-canvas { display:block; }
-
-.panel {
-    position:absolute;
-    top:20px;
-    left:20px;
-    background:rgba(255,255,255,0.1);
-    backdrop-filter: blur(10px);
-    padding:15px;
-    border-radius:15px;
-    color:white;
-    width:260px;
+body{
+margin:0;
+overflow:hidden;
+font-family:Segoe UI, sans-serif;
+background:black;
+color:white;
 }
 
-.panel h3 {
-    margin-top:0;
+/* ===== NAVBAR ===== */
+.navbar{
+position:fixed;
+top:0;
+width:100%;
+background:rgba(0,0,0,0.8);
+display:flex;
+justify-content:space-around;
+padding:10px;
+z-index:10;
+}
+.navbar button{
+background:none;
+border:none;
+color:white;
+font-size:16px;
+cursor:pointer;
+}
+.navbar button:hover{
+color:#00ffff;
 }
 
-button {
-    padding:6px 10px;
-    margin:5px 0;
-    border:none;
-    border-radius:6px;
-    cursor:pointer;
-    font-weight:bold;
+/* ===== CANVAS ===== */
+canvas{
+position:absolute;
+top:0;
+left:0;
 }
 
-.btn-primary { background:#00c6ff; color:white; }
-.btn-danger { background:#ff4b5c; color:white; }
-.btn-success { background:#00ff95; color:black; }
-
-.slider {
-    width:100%;
+/* ===== CONTROL PANEL ===== */
+.panel{
+position:absolute;
+top:70px;
+left:20px;
+background:rgba(255,255,255,0.08);
+backdrop-filter:blur(12px);
+padding:15px;
+border-radius:15px;
+width:270px;
 }
 
-#aboutModal {
-    position:absolute;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    background:white;
-    color:black;
-    padding:20px;
-    border-radius:12px;
-    display:none;
-    width:350px;
+button{
+padding:6px 10px;
+margin:4px 0;
+border:none;
+border-radius:6px;
+cursor:pointer;
+font-weight:bold;
+transition:0.3s;
+}
+
+.btn{
+background:#00c6ff;
+color:white;
+}
+
+.btn.active{
+background:#00ff95;
+color:black;
+box-shadow:0 0 10px #00ff95;
+}
+
+.slider{
+width:100%;
+}
+
+/* ===== ABOUT MODAL ===== */
+#aboutModal{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:white;
+color:black;
+padding:20px;
+border-radius:12px;
+display:none;
+width:350px;
+z-index:20;
 }
 </style>
 </head>
 
 <body>
 
+<div class="navbar">
+<button onclick="showAstronomy()">🌌 Astronomy Lab</button>
+<button onclick="showChemistry()">🧪 Chemistry Lab</button>
+<button onclick="openAbout()">👥 About Team</button>
+</div>
+
 <canvas id="canvas"></canvas>
 
-<div class="panel">
-<h3>🌌 Simulation Controls</h3>
-<button class="btn-primary" onclick="toggleSim()">Start / Pause</button>
-<button class="btn-success" onclick="adaptiveMode()">Adaptive Mode</button>
-<button class="btn-danger" onclick="reset()">Reset</button>
+<div class="panel" id="astronomyPanel">
+<h3>🌠 Simulation Controls</h3>
+<button id="startBtn" class="btn" onclick="toggleSim(this)">Start</button>
+<button id="trailBtn" class="btn" onclick="toggleTrails(this)">Orbit Trails</button>
+<button class="btn" onclick="reset()">Reset</button>
 
-<h3>⚙ Physics</h3>
-<label>Time Step</label>
-<input type="range" min="0.01" max="1" step="0.01" value="0.05" id="dt" class="slider">
+<h3>⚙ Time Step</h3>
+<input type="range" min="0.001" max="0.05" step="0.001" value="0.01" id="dt" class="slider">
+</div>
 
-<h3>📊 Visualization</h3>
-<button class="btn-primary" onclick="toggleTrails()">Toggle Trails</button>
-<button class="btn-primary" onclick="showEnergy()">Energy Graph</button>
-
-<hr>
-<button onclick="openAbout()">👥 About Team</button>
+<div class="panel" id="chemistryPanel" style="display:none;">
+<h3>🧪 Chemistry Lab</h3>
+<p>Simple Reaction Experiment</p>
+<button class="btn" onclick="startReaction()">Start Reaction</button>
+<p id="reactionResult"></p>
 </div>
 
 <div id="aboutModal">
@@ -104,99 +138,159 @@ button {
 </div>
 
 <script>
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
 
-let running = false;
-let adaptive = false;
-let trails = true;
-let bodies = [];
-let G = 1;
+let running=false;
+let trails=false;
+let bodies=[];
+const G=0.0001;
 
-class Body {
-    constructor(x,y,mass,vx,vy,color){
-        this.x=x; this.y=y;
-        this.mass=mass;
-        this.vx=vx; this.vy=vy;
-        this.color=color;
-        this.trail=[];
-    }
-    draw(){
-        ctx.beginPath();
-        ctx.arc(this.x,this.y,Math.max(4,Math.log(this.mass)),0,Math.PI*2);
-        ctx.fillStyle=this.color;
-        ctx.fill();
-
-        if(trails){
-            ctx.beginPath();
-            for(let i=0;i<this.trail.length;i++){
-                ctx.lineTo(this.trail[i].x,this.trail[i].y);
-            }
-            ctx.strokeStyle=this.color;
-            ctx.stroke();
-        }
-    }
+/* ===== GALAXY BACKGROUND ===== */
+let stars=[];
+for(let i=0;i<400;i++){
+stars.push({x:Math.random()*canvas.width,
+y:Math.random()*canvas.height,
+r:Math.random()*1.5});
 }
 
+function drawGalaxy(){
+ctx.fillStyle="black";
+ctx.fillRect(0,0,canvas.width,canvas.height);
+
+stars.forEach(s=>{
+ctx.beginPath();
+ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+ctx.fillStyle="white";
+ctx.fill();
+});
+}
+
+/* ===== BODY CLASS ===== */
+class Body{
+constructor(name,x,y,mass,vx,vy,color){
+this.name=name;
+this.x=x; this.y=y;
+this.mass=mass;
+this.vx=vx; this.vy=vy;
+this.color=color;
+this.trail=[];
+}
+draw(){
+ctx.beginPath();
+ctx.arc(this.x,this.y,Math.max(4,Math.log(this.mass)),0,Math.PI*2);
+ctx.fillStyle=this.color;
+ctx.fill();
+
+ctx.fillStyle="white";
+ctx.font="12px Arial";
+ctx.fillText(this.name,this.x+5,this.y+5);
+
+if(trails){
+ctx.beginPath();
+this.trail.forEach(p=>ctx.lineTo(p.x,p.y));
+ctx.strokeStyle=this.color;
+ctx.stroke();
+}
+}
+}
+
+/* ===== REAL 8 PLANETS ===== */
 function init(){
-    bodies=[];
-    bodies.push(new Body(canvas.width/2,canvas.height/2,5000,0,0,"yellow"));
-    bodies.push(new Body(canvas.width/2+200,canvas.height/2,20,0,3,"cyan"));
+bodies=[];
+let cx=canvas.width/2;
+let cy=canvas.height/2;
+
+bodies.push(new Body("Sun",cx,cy,100000,0,0,"yellow"));
+bodies.push(new Body("Mercury",cx+60,cy,10,0,4,"gray"));
+bodies.push(new Body("Venus",cx+90,cy,15,0,3.5,"orange"));
+bodies.push(new Body("Earth",cx+130,cy,20,0,3,"blue"));
+bodies.push(new Body("Mars",cx+170,cy,12,0,2.7,"red"));
+bodies.push(new Body("Jupiter",cx+230,cy,200,0,2,"brown"));
+bodies.push(new Body("Saturn",cx+300,cy,150,0,1.7,"gold"));
+bodies.push(new Body("Uranus",cx+360,cy,100,0,1.3,"lightblue"));
+bodies.push(new Body("Neptune",cx+420,cy,100,0,1.1,"purple"));
 }
 init();
 
-function rk4(body,dt){
-    let ax=0, ay=0;
-    bodies.forEach(other=>{
-        if(other!==body){
-            let dx=other.x-body.x;
-            let dy=other.y-body.y;
-            let dist=Math.sqrt(dx*dx+dy*dy);
-            let force=G*other.mass/(dist*dist);
-            ax+=force*dx/dist;
-            ay+=force*dy/dist;
-        }
-    });
-    body.vx+=ax*dt;
-    body.vy+=ay*dt;
-    body.x+=body.vx*dt;
-    body.y+=body.vy*dt;
-}
-
+/* ===== PHYSICS UPDATE ===== */
 function update(){
-    let dt=parseFloat(document.getElementById("dt").value);
-    if(adaptive){
-        dt=0.02+0.1*Math.random()*0.3;
-    }
-    bodies.forEach(b=>{
-        rk4(b,dt);
-        b.trail.push({x:b.x,y:b.y});
-        if(b.trail.length>200) b.trail.shift();
-    });
+let dt=parseFloat(document.getElementById("dt").value);
+bodies.forEach(b=>{
+let ax=0, ay=0;
+bodies.forEach(o=>{
+if(o!==b){
+let dx=o.x-b.x;
+let dy=o.y-b.y;
+let dist=Math.sqrt(dx*dx+dy*dy);
+let force=G*o.mass/(dist*dist);
+ax+=force*dx/dist;
+ay+=force*dy/dist;
+}
+});
+b.vx+=ax*dt;
+b.vy+=ay*dt;
+b.x+=b.vx*dt;
+b.y+=b.vy*dt;
+
+b.trail.push({x:b.x,y:b.y});
+if(b.trail.length>150) b.trail.shift();
+});
 }
 
+/* ===== DRAW LOOP ===== */
 function draw(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    bodies.forEach(b=>b.draw());
+drawGalaxy();
+bodies.forEach(b=>b.draw());
 }
 
 function animate(){
-    if(running) update();
-    draw();
-    requestAnimationFrame(animate);
+if(running) update();
+draw();
+requestAnimationFrame(animate);
 }
 animate();
 
-function toggleSim(){ running=!running; }
-function adaptiveMode(){ adaptive=!adaptive; }
-function reset(){ init(); }
-function toggleTrails(){ trails=!trails; }
-function showEnergy(){ alert("Energy graph module placeholder"); }
-function openAbout(){ document.getElementById("aboutModal").style.display="block"; }
-function closeAbout(){ document.getElementById("aboutModal").style.display="none"; }
+/* ===== BUTTON LOGIC ===== */
+function toggleSim(btn){
+running=!running;
+btn.classList.toggle("active");
+btn.textContent=running?"Pause":"Start";
+}
 
+function toggleTrails(btn){
+trails=!trails;
+btn.classList.toggle("active");
+}
+
+function reset(){ init(); }
+
+/* ===== NAVIGATION ===== */
+function showAstronomy(){
+document.getElementById("astronomyPanel").style.display="block";
+document.getElementById("chemistryPanel").style.display="none";
+}
+
+function showChemistry(){
+document.getElementById("astronomyPanel").style.display="none";
+document.getElementById("chemistryPanel").style.display="block";
+}
+
+function startReaction(){
+document.getElementById("reactionResult").innerText=
+"Hydrogen + Oxygen → Water (H₂O) Reaction Simulated!";
+}
+
+/* ===== ABOUT ===== */
+function openAbout(){
+document.getElementById("aboutModal").style.display="block";
+}
+function closeAbout(){
+document.getElementById("aboutModal").style.display="none";
+}
 </script>
+
 </body>
 </html>
