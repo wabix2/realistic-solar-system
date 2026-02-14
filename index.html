@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Interstellar RK4 - Mobile Optimized</title>
+    <title>Interstellar RK4 - Pro Mobile Edition</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -10,78 +10,71 @@
     <style>
         :root {
             --neon: #00f2fe;
-            --glass: rgba(0, 5, 15, 0.95);
+            --glass: rgba(0, 7, 20, 0.95);
             --font: 'Segoe UI', system-ui, sans-serif;
             --chem-accent: #39ff14;
             --astro-accent: #ff00ff;
         }
 
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: var(--font); color: white; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; font-family: var(--font); color: white; touch-action: none; }
         
-        /* NAVIGATION BAR */
+        /* TOP NAV */
         #top-nav {
             position: fixed; top: 0; left: 0; width: 100%; height: 50px;
             background: var(--glass); border-bottom: 1px solid rgba(0, 242, 254, 0.3);
-            display: flex; justify-content: center; align-items: center; z-index: 1000; gap: 15px;
+            display: flex; justify-content: center; align-items: center; z-index: 1000;
         }
 
         .nav-tab {
-            padding: 5px 12px; cursor: pointer; text-transform: uppercase;
-            letter-spacing: 1px; font-weight: bold; font-size: 0.75em;
-            transition: 0.3s; border-bottom: 2px solid transparent;
+            padding: 10px 15px; cursor: pointer; text-transform: uppercase;
+            letter-spacing: 1px; font-weight: bold; font-size: 0.7em; border-bottom: 2px solid transparent;
         }
         .active-astro { color: var(--astro-accent); border-bottom-color: var(--astro-accent); }
         .active-chem { color: var(--chem-accent); border-bottom-color: var(--chem-accent); }
 
-        /* MOBILE OVERLAY TOGGLE */
+        /* MOBILE TOGGLE */
         #mobile-toggle {
             display: none; position: fixed; bottom: 20px; right: 20px;
             z-index: 1100; background: var(--neon); color: #000;
             border: none; padding: 12px 20px; border-radius: 50px;
-            font-weight: bold; box-shadow: 0 0 15px var(--neon);
+            font-weight: bold; font-size: 0.9em; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4);
         }
 
-        /* PANELS */
+        /* HUD PANELS */
         .hud-panel {
-            position: fixed; background: var(--glass); backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 12px;
-            padding: 15px; z-index: 500; transition: transform 0.4s ease;
+            position: fixed; background: var(--glass); backdrop-filter: blur(15px);
+            border: 1px solid rgba(0, 242, 254, 0.3); border-radius: 15px;
+            padding: 20px; z-index: 500; transition: transform 0.4s ease-in-out;
+            display: flex; flex-direction: column; box-sizing: border-box;
         }
 
-        #main-controls { top: 60px; left: 15px; width: 220px; }
-        #lab-panel { top: 60px; right: 15px; width: 220px; }
-        #telemetry { bottom: 20px; left: 15px; width: 160px; font-size: 0.8em; }
+        #main-controls { top: 70px; left: 20px; width: 260px; }
+        #lab-panel { top: 70px; right: 20px; width: 260px; }
+        #telemetry { bottom: 25px; left: 25px; pointer-events: none; border:none; background:none; }
 
-        /* MOBILE SPECIFIC RULES */
         @media (max-width: 768px) {
             #mobile-toggle { display: block; }
-            
             .hud-panel {
-                top: auto !important; bottom: 80px !important; left: 5% !important;
+                top: auto !important; bottom: 90px !important; left: 5% !important;
                 width: 90% !important; right: auto !important;
-                transform: translateY(150%); /* Hidden by default */
+                max-height: 55vh; overflow-y: auto; transform: translateY(160%);
             }
-
             .hud-panel.show-mobile { transform: translateY(0); }
-            
-            #telemetry { bottom: 70px; width: 90%; left: 5%; pointer-events: none; }
-            #main-controls { z-index: 1001; }
-            #lab-panel { z-index: 1002; }
+            #telemetry { bottom: 20px; left: 5%; font-size: 0.8em; }
         }
 
-        h2 { margin: 0 0 10px 0; font-size: 0.9em; text-transform: uppercase; color: var(--neon); border-bottom: 1px solid #333; }
-        label { font-size: 0.6em; color: #888; display: block; margin-top: 10px; }
-        select, input, button { width: 100%; background: #050505; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 5px; margin-top: 5px; font-size: 0.8em; }
-        .btn-primary { background: var(--neon); color: #000; border: none; font-weight: bold; cursor: pointer; }
+        h2 { margin: 0 0 10px 0; font-size: 1em; text-transform: uppercase; color: var(--neon); border-bottom: 1px solid #333; }
+        label { font-size: 0.65em; color: #aaa; display: block; margin-top: 12px; }
+        select, input, button { width: 100%; background: #0a0a1a; border: 1px solid #333; color: #fff; padding: 10px; border-radius: 8px; margin-top: 5px; font-size: 0.85em; }
+        .btn-primary { background: var(--neon); color: #000; border: none; font-weight: bold; margin-top: 15px; }
         .btn-nova { background: #ff416c; border: none; font-weight: bold; }
 
-        /* PERSONNEL PORTAL */
         #team-portal {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 85%; max-width: 350px; background: #050505; border: 2px solid var(--neon);
-            border-radius: 15px; padding: 20px; display: none; z-index: 2000;
+            width: 90%; max-width: 380px; background: #050505; border: 2px solid var(--neon);
+            border-radius: 20px; padding: 20px; display: none; z-index: 2000; max-height: 80vh; overflow-y: auto;
         }
-        .team-entry { border-left: 3px solid var(--neon); padding: 5px 10px; margin-bottom: 8px; background: #111; font-size: 0.85em; }
+        .team-entry { border-left: 3px solid var(--neon); padding: 8px 12px; margin-bottom: 8px; background: #111; }
     </style>
 </head>
 <body>
@@ -95,53 +88,55 @@
 
 <div id="main-controls" class="hud-panel">
     <h2>Control Center</h2>
-    <label>Focus</label>
-    <select id="cameraTarget" onchange="updateTarget()">
+    <label>Navigation Focus</label>
+    <select id="cameraTarget" onchange="updateTarget(); autoCloseMenu();">
         <option value="Sun">Sun</option>
         <option value="Earth">Earth</option>
         <option value="Jupiter">Jupiter</option>
+        <option value="Mars">Mars</option>
     </select>
     <label>Time Flow</label>
     <input type="range" id="dt" min="0.0001" max="0.05" step="0.0001" value="0.005">
-    <button class="btn-primary" style="margin-top:10px" onclick="togglePortal(true)">TEAM INFO</button>
+    <button class="btn-primary" onclick="togglePortal(true)">VIEW TEAM</button>
 </div>
 
 <div id="lab-panel" class="hud-panel">
     <div id="astro-content">
-        <h2 style="color: var(--astro-accent)">Physics Lab</h2>
+        <h2 style="color: var(--astro-accent)">Astronomy</h2>
         <label>Gravity</label>
         <input type="range" min="1000" max="15000" value="6500" oninput="G = this.value">
-        <button style="margin-top:10px" onclick="location.reload()">Reset Sim</button>
+        <button style="margin-top:20px" onclick="location.reload()">Reset Sim</button>
     </div>
     <div id="chem-content" style="display:none;">
-        <h2 style="color: var(--chem-accent)">Chemistry Lab</h2>
-        <label>Composition</label>
-        <select onchange="updateStellarColor(this.value)">
+        <h2 style="color: var(--chem-accent)">Chemistry</h2>
+        <label>Star Composition</label>
+        <select onchange="updateStellarColor(this.value); autoCloseMenu();">
             <option value="0xffcc00">Hydrogen</option>
             <option value="0x00f2fe">Ionized</option>
+            <option value="0xff4b2b">Red Giant</option>
         </select>
-        <button class="btn-nova" style="margin-top:10px" onclick="triggerSupernova()">💥 SUPERNOVA</button>
+        <button class="btn-nova" onclick="triggerSupernova()">💥 SUPERNOVA</button>
     </div>
 </div>
 
 <div id="telemetry" class="hud-panel">
-    <div id="tel-name">Target: Sun</div>
+    <div id="tel-name" style="color:var(--neon); font-weight:bold;">Target: Sun</div>
 </div>
 
 <div id="team-portal">
-    <h2 style="text-align: center;">Team Portal</h2>
-    <div class="team-entry"><span>Lead Dev:</span> <b>Wabi Tafese</b></div>
-    <div class="team-entry"><span>Programmer:</span> <b>Rakeb Tewodros</b></div>
-    <div class="team-entry"><span>Research:</span> <b>Henok Yared</b></div>
-    <div class="team-entry"><span>Present:</span> <b>Rediet Mebt</b></div>
-    <div class="team-entry"><span>Analyst:</span> <b>Aklesiya Negalign</b></div>
-    <div class="team-entry"><span>Support:</span> <b>Hemen Tadese</b></div>
-    <div class="team-entry"><span>Coord:</span> <b>Arsema Laikemariam</b></div>
+    <h2 style="text-align: center; color:var(--neon)">Personnel Portal</h2>
+    <div class="team-entry"><span>Lead Dev:</span><br><b>Wabi Tafese</b></div>
+    <div class="team-entry"><span>Programmer:</span><br><b>Rakeb Tewodros</b></div>
+    <div class="team-entry"><span>Researcher:</span><br><b>Henok Yared</b></div>
+    <div class="team-entry"><span>Presentation:</span><br><b>Rediet Mebt</b></div>
+    <div class="team-entry"><span>Data Analyst:</span><br><b>Aklesiya Negalign</b></div>
+    <div class="team-entry"><span>Support:</span><br><b>Hemen Tadese</b></div>
+    <div class="team-entry"><span>Coordinator:</span><br><b>Arsema Laikemariam</b></div>
     <button class="btn-primary" onclick="togglePortal(false)">CLOSE</button>
 </div>
 
 <script>
-let scene, camera, renderer, controls, bodies = [], glows = [], targetBody = null, G = 6500, nova = false;
+let scene, camera, renderer, controls, bodies = [], targetBody = null, G = 6500, nova = false;
 
 function init() {
     scene = new THREE.Scene();
@@ -152,16 +147,23 @@ function init() {
     document.body.appendChild(renderer.domElement);
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-
     setupUniverse();
     animate();
 }
 
 function toggleMobileUI() {
-    const panels = document.querySelectorAll('.hud-panel');
+    const panels = [document.getElementById('main-controls'), document.getElementById('lab-panel')];
     const btn = document.getElementById('mobile-toggle');
     panels.forEach(p => p.classList.toggle('show-mobile'));
     btn.innerText = btn.innerText === "MENU" ? "CLOSE" : "MENU";
+}
+
+function autoCloseMenu() {
+    if (window.innerWidth <= 768) {
+        const panels = [document.getElementById('main-controls'), document.getElementById('lab-panel')];
+        panels.forEach(p => p.classList.remove('show-mobile'));
+        document.getElementById('mobile-toggle').innerText = "MENU";
+    }
 }
 
 function switchLab(type) {
@@ -194,8 +196,8 @@ function updateStellarColor(color) {
     bodies[0].mesh.material.emissive.setHex(c);
 }
 
-function triggerSupernova() { nova = true; }
-function togglePortal(s) { document.getElementById('team-portal').style.display = s ? 'block' : 'none'; }
+function triggerSupernova() { nova = true; autoCloseMenu(); }
+function togglePortal(s) { document.getElementById('team-portal').style.display = s ? 'block' : 'none'; if(s) autoCloseMenu(); }
 function updateTarget() { targetBody = bodies.find(b => b.name === document.getElementById('cameraTarget').value); }
 
 function animate() {
