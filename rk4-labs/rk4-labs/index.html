@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>Interstellar RK4 - Integrator Lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js","three/examples/jsm/":"https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/"}}</script>
+</head><body>
+<div id="nav"><div id="tAstro" class="tab on-astro" onclick="labTab('astro')">Astronomy</div><div id="tChem" class="tab" onclick="labTab('chem')">Chemistry</div></div>
+<button id="mtoggle" onclick="mobile()">MENU</button>
+<div id="ctrl" class="hud"><h2>Control Center</h2>
+<label>Navigation Focus</label><select id="focus" onchange="setFocus(this.value);closeMenu()"></select>
+<label>Integrator (view)</label><select id="method"><option value="rk4">RK4</option><option value="rk45">Adaptive RK45 (Dormand-Prince)</option><option value="verlet">Velocity Verlet</option><option value="euler">Explicit Euler</option></select>
+<label>Time step (days per step)</label><select id="dt" onchange="reset()"><option value="0.0005">0.18</option><option value="0.002">0.73</option><option value="0.005" selected>1.83</option><option value="0.01">3.65</option><option value="0.02">7.3</option></select>
+<label>Time Warp (steps per frame)</label><input type="range" id="warp" min="1" max="200" value="20">
+<label>Distance scale</label><select id="scale"><option value="0">Compressed (fits screen)</option><option value="1">True linear scale</option></select>
+<button class="pri" onclick="launch()">&#9732; Launch comet</button><button class="pri" onclick="team(true)" style="margin-top:6px">VIEW TEAM</button></div>
+<div id="lab" class="hud"><div id="astro"><h2 style="color:var(--astro)">Physics Lab</h2>
+<div class="lg"><span style="color:#ff5566">&#9632; Euler</span><span style="color:#55ff88">&#9632; Verlet</span><span style="color:#00f2fe">&#9632; RK4</span><span style="color:#ffb000">&#9632; RK45</span></div>
+<canvas id="plot" width="480" height="200"></canvas><label>Relative energy error |&Delta;E/E&#8320;|, log scale 1e-14 to 1</label>
+<button onclick="reset()">Reset Universe</button><button onclick="tests()">Run self-tests</button><pre id="res"></pre></div>
+<div id="chem" style="display:none"><h2 style="color:var(--chem)">Chemistry Lab</h2><label>Composition</label>
+<select onchange="sunColor(this.value);closeMenu()"><option value="0xffcc00">Hydrogen/Helium</option><option value="0x00f2fe">Ionized Plasma</option><option value="0xff4b2b">Red Giant</option></select>
+<button class="nova" onclick="nova();closeMenu()" style="margin-top:12px">&#128165; TRIGGER SUPERNOVA</button></div></div>
+<div id="tel" class="hud"><div id="tName" style="color:var(--neon);font-weight:bold">Sun</div><div id="tInfo"></div></div>
+<div id="team"><h2 style="text-align:center">Personnel Portal</h2>
+<div class="mem">Lead Dev:<br><b>Wabi Tafese</b></div><div class="mem">Programmer:<br><b>Rakeb Tewodros</b></div><div class="mem">Researcher:<br><b>Henok Yared</b></div><div class="mem">Presentation:<br><b>Rediet Mebt</b></div><div class="mem">Data Analyst:<br><b>Aklesiya Negalign</b></div><div class="mem">Support:<br><b>Hemen Tadese</b></div><div class="mem">Coordinator:<br><b>Arsema Laikemariam</b></div>
+<button class="pri" onclick="team(false)">CLOSE</button></div>
+<script type="module" src="src/main.js"></script>
+</body></html>

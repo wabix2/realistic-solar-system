@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Interstellar RK4: N-Body Integrator Lab"
+type: software
+license: MIT
+url: "https://rk4-labs.vercel.app"
+authors:
+  - family-names: Tafese
+    given-names: Wabi

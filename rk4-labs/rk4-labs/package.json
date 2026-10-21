@@ -1,0 +1,2 @@
+{"name":"rk4-labs","version":"1.0.0","type":"module","description":"N-body solar-system simulator comparing Euler, Verlet, RK4 and adaptive RK45 integrators","license":"MIT",
+"scripts":{"test":"node --test","bench":"node scripts/convergence.js","plots":"python3 scripts/plot.py","serve":"npx serve ."}}
