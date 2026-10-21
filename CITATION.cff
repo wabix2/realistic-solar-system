@@ -1,0 +1,60 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper and the software archive."
+title: "Realistic Solar System: N-body simulator comparing Euler, Velocity Verlet, RK4 and adaptive RK45 integrators"
+type: software
+version: "1.0.0"
+date-released: "2026-10-21"
+license: MIT
+repository-code: "https://github.com/wabix2/realistic-solar-system"
+url: "https://rk4-labs.vercel.app"
+abstract: >-
+  An interactive, browser-based three-dimensional solar-system simulator (JavaScript, three.js)
+  that runs four numerical integrators in parallel from identical JPL J2000 initial conditions:
+  explicit Euler, velocity Verlet, classical RK4 and adaptive Dormand-Prince RK45. Includes an
+  automated test suite and benchmark scripts (folder rk4-labs) that regenerate every number and
+  figure in the accompanying paper.
+keywords:
+  - N-body simulation
+  - Runge-Kutta
+  - Verlet integration
+  - orbital mechanics
+  - numerical integration
+  - energy conservation
+  - solar system
+authors:
+  - family-names: Tafese
+    given-names: Wabi
+  - family-names: Tewodros
+    given-names: Rakeb
+  - family-names: Yared
+    given-names: Henok
+  - family-names: Mebt
+    given-names: Rediet
+  - family-names: Negalign
+    given-names: Aklesiya
+  - family-names: Tadese
+    given-names: Hemen
+  - family-names: Laikemariam
+    given-names: Arsema
+preferred-citation:
+  type: article
+  title: "Comparison of Numerical Integrators for N-Body Simulation of the Solar System: Euler, Velocity Verlet, RK4 and Adaptive RK45"
+  year: 2026
+  doi: "10.5281/zenodo.23529877"
+  publisher:
+    name: Zenodo
+  authors:
+    - family-names: Tafese
+      given-names: Wabi
+    - family-names: Tewodros
+      given-names: Rakeb
+    - family-names: Yared
+      given-names: Henok
+    - family-names: Mebt
+      given-names: Rediet
+    - family-names: Negalign
+      given-names: Aklesiya
+    - family-names: Tadese
+      given-names: Hemen
+    - family-names: Laikemariam
+      given-names: Arsema
